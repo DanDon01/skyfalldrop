@@ -1,1 +1,156 @@
 ## Master Plan
+Skyfall Drop: Project Blueprint
+
+TL;DR
+
+A vibe-first, mobile-friendly free-fall arcade game. Instant play. No death. No pause. Just pure motion, juicy score progression, and a clean portal exit to your next game or someone else’s. Designed to feel good, look cool, and get shared.
+
+⸻
+
+Core Features
+	•	Instant Start: You’re falling the moment it loads. No title screen fluff.
+	•	Left/Right Dodge: Avoid birds, planes, and sky chaos. Touch + keyboard support.
+	•	Score Builder: Score climbs the longer you survive. Hitting stuff reduces score.
+	•	No Death: It’s about rhythm, not punishment. Collisions just slow you down.
+	•	Portal Exit: Reach a score/time threshold and unlock a portal to exit.
+	•	Mobile-First: Fully responsive canvas. Touch controls come first.
+	•	VibeShot: Snapshot mode to flex your score with style. Pose, slow-mo, screenshot.
+
+⸻
+
+Game Design Pillars
+	•	Simple but Addictive
+	•	Always in Motion
+	•	Visual Feedback Everywhere
+	•	No Menus, No Tutorials – Learn While Falling
+	•	Style-Driven Gameplay
+
+⸻
+
+Core Game Loop
+	1.	Game loads, player starts falling through the sky
+	2.	After a few seconds, controls appear (left/right)
+	3.	Score ticks up per second survived
+	4.	Obstacles spawn – birds, planes, balloons etc.
+	5.	Collisions reduce score slightly, player bounces
+	6.	At a score/time milestone, portal appears
+	7.	Player falls through the portal to end session
+	8.	Optional: Trigger screenshot/slow-mo at any point
+
+/public
+  /textures/         // All image assets (sprites, background)
+  /audio/            // Background music + sound effects
+  index.html
+
+/src
+  main.js            // Game bootstrap + render loop
+  player.js          // Movement + trail logic
+  background.js      // Sky layers, cloud parallax
+  obstacles.js       // Spawning + collision
+  score.js           // Score system + milestones
+  portal.js          // Portal trigger + FX
+  controls.js        // Touch + keyboard inputs
+  snapshot.js        // VibeShot mode
+  assets.js          // Preloader for images/audio
+  ui.js              // Any overlays (score, messages)
+  utils.js           // Collision math, helpers
+
+README.md            // This file
+
+Bill of Materials (Assets)
+
+Sprites / PNGs
+	•	Player (skydiver, stylised or silhouetted)
+	•	Birds (pigeon, crow, flamingo)
+	•	Planes (paper plane, jet, balloon)
+	•	Clouds (3–4 layers of fluff, transparent)
+	•	Portal (glowing ring or dimensional rift)
+	•	Score milestone flashes (“1,000!” / “10K Club”)
+
+Audio
+	•	Lo-fi background loop
+	•	SFX:
+	•	Whoosh (falling)
+	•	Hit bounce
+	•	Milestone ping
+	•	Portal warp
+	•	VibeShot click + slow-mo whoosh
+
+Fonts
+	•	Arcade/clean sans serif (e.g. Orbitron, Inter, or an old-school 90s LCD style)
+	•	Style to match Skyfall Drop logo
+
+⸻
+
+Input & Controls
+
+Desktop
+	•	Left/Right Arrow Keys or A/D
+
+Mobile
+	•	Tap left/right screen zones
+	•	Optionally: virtual buttons or tilt (later)
+
+Snapshot
+	•	“Snap” button appears early in the fall
+	•	Triggers slow motion, player pose, score zoom
+	•	Screenshot via html2canvas or prompt to screenshot manually
+	•	Shows watermark: @AI_TechnoKing and game URL
+
+⸻
+
+Scoring Logic
+	•	+10 per second survived
+	•	-100 per collision
+	•	Milestones (1k, 5k, 10k, 25k) trigger:
+	•	On-screen FX
+	•	Particle burst
+	•	Sound ping
+	•	Optional trail/sky change
+
+⸻
+
+Portal Logic
+	•	Unlocks after X seconds or Y score
+	•	Appears at the bottom of the screen
+	•	Once hit, fades out to another game URL
+	•	Optional: click to opt-in to portal (or auto-enter)
+
+⸻
+
+Stretch Goals
+	•	Trail styles unlocked by score
+	•	Day/Night sky shift based on run length
+	•	Dynamic weather layers (rain, storm, wind gusts)
+	•	Global/local leaderboard (after MVP)
+	•	Random daily sky seeds (for cloud/object style)
+
+⸻
+
+Launch Checklist
+	•	Mobile-first canvas
+	•	Touch + keyboard controls
+	•	Sprite-based visual style (no 3D models)
+	•	Background music + sound effects
+	•	Score counter + milestones
+	•	Object collisions with bounce + penalty
+	•	Snapshot mode with overlay + screenshot
+	•	Portal trigger to external URL
+	•	Lightweight & fast loading (portal-ready)
+	•	Live at skyfalldrop.com or similar
+
+⸻
+
+Post-Launch Ideas
+	•	Seasonal themes (e.g. Skyfall Drop: Snow Drift)
+	•	Community portal clusters (randomised destination pools)
+	•	“Portal Roulette” mode – you never know where you’ll end up
+
+⸻
+
+Your Branding
+	•	Game Name: Skyfall Drop
+	•	X Handle: @AI_TechnoKing
+	•	Logo: In /assets/logo.png (see brand mockup)
+	•	Theme: Chill arcade + visual flex
+
