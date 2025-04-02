@@ -1,0 +1,25 @@
+{
+  "name": "skyfalldrop",
+  "version": "1.0.0",
+  "description": "A vibe-first, mobile-friendly free-fall arcade game.",
+  "main": "src/js/main.js",
+  "scripts": {
+    "start": "live-server public",
+    "test": "jest"
+  },
+  "dependencies": {
+    "jquery": "^3.6.0"
+  },
+  "devDependencies": {
+    "jest": "^27.0.0",
+    "live-server": "^1.2.1"
+  },
+  "keywords": [
+    "arcade",
+    "game",
+    "javascript",
+    "mobile"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}
