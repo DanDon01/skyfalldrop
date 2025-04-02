@@ -3,7 +3,9 @@ Skyfall Drop: Project Blueprint
 
 TL;DR
 
-A vibe-first, mobile-friendly free-fall arcade game. Instant play. No death. No pause. Just pure motion, juicy score progression, and a clean portal exit to your next game or someone else’s. Designed to feel good, look cool, and get shared.
+A vibe-first, mobile-friendly free-fall arcade game. 
+Instant play. No death. No pause. Just pure motion, juicy score progression, and a clean portal exit to your next game or someone else’s. 
+Designed to feel good, look cool, and get shared.
 
 ⸻
 
@@ -49,9 +51,11 @@ Core Game Loop
   obstacles.js       // Spawning + collision
   score.js           // Score system + milestones
   portal.js          // Portal trigger + FX
-  controls.js        // Touch + keyboard inputs
+  controls.js        // Keyboard inputs
+  controls-touch.js  // Touch screen controls
   snapshot.js        // VibeShot mode
   assets.js          // Preloader for images/audio
+  leaderboard		 // Leaderboard (if needed)
   ui.js              // Any overlays (score, messages)
   utils.js           // Collision math, helpers
 
