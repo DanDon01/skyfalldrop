@@ -1,163 +1,114 @@
-// Player class handles movement, collision detection, and trail rendering for the falling player character
+import * as THREE from 'three';
 
 export class Player {
-    constructor(canvas, assets) { // Added assets parameter
-        this.canvas = canvas;
-        this.assets = assets; // Store asset manager
-        this.image = this.assets.getImage('player'); // Get player image
+    constructor(scene, assets) { // Added assets parameter back
+        this.scene = scene;
+        this.assets = assets; // Store assets
+        this.moveSpeed = 30;
+        // this.fallSpeed = 5; // Player no longer controls its own falling speed
+        // this.velocity = new THREE.Vector3(0, -this.fallSpeed, 0); // Velocity managed differently
 
-        // Define dimensions - adjust these based on the actual sprite size
-        this.width = this.image ? this.image.width : 40; // Use image width or fallback
-        this.height = this.image ? this.image.height : 40; // Use image height or fallback
+        // Get player texture
+        const playerTexture = this.assets.getTexture('player');
 
-        this.x = canvas.width / 2 - this.width / 2; // Center based on width
-        this.y = canvas.height / 3; // Initial vertical position
-        this.velocity = { x: 0, y: 5 };
-        // Keep radius for circle collision, might need refinement for sprite collision
-        this.radius = Math.max(this.width, this.height) / 2;
-        this.trail = [];
-        this.color = 'white'; // Default/fallback color
-        this.moveSpeed = 7;
-        // Collision Flash properties
-        this.isFlashing = false;
-        this.flashDuration = 150; // ms
-        this.flashTimer = 0;
-        this.flashColor = 'orange';
-        // Trail properties
-        this.trailMaxLength = 15; // Max number of points in the trail
-        this.trailColor = 'rgba(255, 255, 255, 0.5)'; // Semi-transparent white
-        this.trailPointInterval = 2; // Add point every N frames/updates
-        this.updateCounter = 0; // Counter for interval
+        // Define dimensions based on texture or fallback
+        // Adjust these base values as needed for desired player size
+        const baseWidth = 5;
+        const baseHeight = 5;
+        this.width = playerTexture ? baseWidth : 4; // Use baseWidth if texture exists
+        this.height = playerTexture ? (baseWidth * (playerTexture.image.height / playerTexture.image.width)) : 4; // Maintain aspect ratio or use fallback
+
+        // Create 3D representation (Plane with texture)
+        const geometry = new THREE.PlaneGeometry(this.width, this.height);
+        const material = new THREE.MeshBasicMaterial({
+            color: 0xffffff, // Tint color (white = no tint)
+            map: playerTexture || null,
+            transparent: true, // Enable transparency for PNG
+            alphaTest: 0.1, // Adjust transparency threshold if needed
+            side: THREE.DoubleSide // Render both sides
+        });
+        this.mesh = new THREE.Mesh(geometry, material);
+
+        // Initial position (Vertically centered, adjust Y offset as needed)
+        this.mesh.position.set(0, 0, 0); // Start at origin, camera will be positioned relative
+
+        // Add player mesh to the scene
+        this.scene.add(this.mesh);
+
+        // Bounding box for collisions (will be updated)
+        // Note: Using Box3 on a Plane might not be ideal for precise collision.
+        // Consider using Sphere collision or more complex geometry later.
+        this.boundingBox = new THREE.Box3().setFromObject(this.mesh);
+        // Manually adjust Box3 size if needed for better fit
+        // this.boundingBox.expandByScalar(-1); // Example: slightly shrink box
+
+        // Collision Flash properties (placeholder - implement later)
+        // this.isFlashing = false;
+        // this.flashDuration = 150;
+        // this.flashTimer = 0;
+        // this.flashColor = 0xffa500; // Orange in hex
+        // this.originalColor = material.color.getHex();
+
+        console.log("3D Player initialized");
     }
 
-    update(controls, touchControls, deltaTime) { // Added touchControls parameter
-        // Basic falling physics
-        this.y += this.velocity.y; // Consider using deltaTime for frame-independent physics later if needed
-
-        // Keep player within bounds (simple example, might need refinement)
-        if (this.y + this.radius > this.canvas.height) {
-            this.y = this.canvas.height - this.radius;
-            // Optional: Stop falling or handle bottom boundary
-        }
-        if (this.y - this.radius < 0) {
-            this.y = this.radius;
-        }
-
-        // Handle horizontal movement based on controls (keyboard and touch)
-        this.handleMovement(controls, touchControls);
-
-        // Keep player within horizontal bounds
-        if (this.x - this.radius < 0) {
-            this.x = this.radius;
-        }
-        if (this.x + this.radius > this.canvas.width) {
-            this.x = this.canvas.width - this.radius;
-        }
-
-        // Update flash timer
-        if (this.isFlashing) {
-            this.flashTimer -= deltaTime;
-            if (this.flashTimer <= 0) {
-                this.isFlashing = false;
-            }
-        }
-
-        this.updateTrail(deltaTime); // Pass deltaTime if needed for timing
-    }
-
-    handleMovement(controls, touchControls) {
-        // Check either keyboard OR touch controls for movement
+    update(deltaTime, controls, touchControls) {
+        // --- Movement ---
+        let moveDirectionX = 0;
         if (controls.left || touchControls.left) {
-            this.x -= this.moveSpeed;
+            moveDirectionX = -1;
+        } else if (controls.right || touchControls.right) {
+            moveDirectionX = 1;
         }
-        if (controls.right || touchControls.right) {
-            this.x += this.moveSpeed;
+
+        // Update horizontal position
+        this.mesh.position.x += moveDirectionX * this.moveSpeed * deltaTime;
+
+        // --- Falling (Removed - Player stays vertically centered) ---
+        // this.mesh.position.y += this.velocity.y * deltaTime;
+
+        // --- Bounds Checking (Horizontal only) ---
+        const horizontalLimit = 50;
+        if (this.mesh.position.x < -horizontalLimit) {
+            this.mesh.position.x = -horizontalLimit;
         }
+        if (this.mesh.position.x > horizontalLimit) {
+            this.mesh.position.x = horizontalLimit;
+        }
+
+        // Floor limit (optional - game might not have one)
+        // const floorLimit = -100;
+        // if (this.mesh.position.y < floorLimit) {
+        //     this.mesh.position.y = floorLimit;
+        //     this.velocity.y = 0;
+        // }
+
+        // --- Update Bounding Box ---
+        this.boundingBox.setFromObject(this.mesh);
+
+        // --- Collision Flash Update (Implement later) ---
+        // if (this.isFlashing) { ... }
+
+        // --- Trail Update (Implement later) ---
+        // this.updateTrail(deltaTime);
     }
 
     handleCollision() {
-        // Simple bounce effect: reverse vertical velocity slightly
-        this.velocity.y *= -0.5;
+        // Adapt bounce for 3D - Player doesn't move vertically,
+        // so bounce might affect world speed or trigger visual effect only.
+        // For now, just log it. We'll add visual flash later.
+        // this.velocity.y = 10; // No longer applicable
 
-        // Trigger visual flash
-        this.isFlashing = true;
-        this.flashTimer = this.flashDuration;
+        // Trigger visual flash (Implement later)
+        // this.isFlashing = true;
+        // this.flashTimer = this.flashDuration;
+        // this.mesh.material.color.setHex(this.flashColor);
 
-        // Optional: Add temporary invincibility?
+        console.log("Player collision handled (3D)");
     }
 
-    updateTrail(deltaTime) {
-        this.updateCounter++;
-        if (this.updateCounter >= this.trailPointInterval) {
-            this.updateCounter = 0;
-            // Add current position to the beginning of the trail array
-            this.trail.unshift({ x: this.x, y: this.y });
+    // updateTrail(deltaTime) { ... Refactor for 3D trail ... }
+    // renderTrail(ctx) { ... Remove or refactor for 3D trail ... }
 
-            // Limit trail length
-            if (this.trail.length > this.trailMaxLength) {
-                this.trail.pop(); // Remove the oldest point
-            }
-        }
-    }
-
-    render(ctx) {
-        // Save context state
-        ctx.save();
-
-        if (this.isFlashing) {
-            // Apply flash effect (e.g., tint or overlay)
-            // Simple approach: draw sprite slightly transparent then overlay color
-            // More complex: use filters or blend modes if needed
-            // For fallback circle, just change fillStyle
-        }
-
-        if (this.image) {
-            // Draw the player sprite
-            if (this.isFlashing) {
-                 // Example: Draw semi-transparent sprite then color overlay
-                 // This is basic; a shader/filter would be better for tinting
-                 ctx.globalAlpha = 0.6;
-                 ctx.drawImage(this.image, this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
-                 ctx.globalAlpha = 0.4; // Overlay alpha
-                 ctx.fillStyle = this.flashColor;
-                 ctx.fillRect(this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
-                 ctx.globalAlpha = 1.0; // Reset alpha
-            } else {
-                 ctx.drawImage(this.image, this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
-            }
-        } else {
-            // Fallback: Draw a simple circle
-            ctx.beginPath();
-            const fallbackRadius = Math.max(this.width, this.height) / 2; // Use calculated radius
-            ctx.arc(this.x, this.y, fallbackRadius, 0, Math.PI * 2);
-            ctx.fillStyle = this.isFlashing ? this.flashColor : this.color; // Use flash color if flashing
-            ctx.fill();
-            ctx.closePath();
-            // console.warn("Player image not loaded, drawing fallback circle."); // Keep warning minimal
-        }
-
-        // Restore context state
-        ctx.restore();
-
-        // Render the trail
-        this.renderTrail(ctx);
-    }
-
-    renderTrail(ctx) {
-        ctx.save();
-        for (let i = 0; i < this.trail.length; i++) {
-            const point = this.trail[i];
-            const ratio = (this.trail.length - i) / this.trail.length; // 1 for newest, 0 for oldest
-
-            // Example: Draw fading circles
-            ctx.beginPath();
-            ctx.arc(point.x, point.y, this.radius * ratio * 0.5, 0, Math.PI * 2); // Size decreases
-            ctx.fillStyle = `rgba(255, 255, 255, ${0.5 * ratio})`; // Opacity decreases
-            ctx.fill();
-            ctx.closePath();
-
-            // Alternative: Draw a line? (More complex to make look good)
-        }
-        ctx.restore();
-    }
+    // No render method needed here, handled by main loop
 }

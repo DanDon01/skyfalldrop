@@ -22,29 +22,25 @@ export class ScoreManager {
             { score: 25000, image: 'milestone_flash_25k', reached: false },
         ];
         this.timeAccumulator = 0;
-        this.activeMilestone = null;
-        this.milestoneTimer = 0; // Timer for how long to display it
+        // Removed activeMilestone and milestoneTimer as rendering is handled by UI
     }
 
     update(deltaTime) {
         // Update score based on time
         this.timeAccumulator += deltaTime;
 
-        // Check if a second has passed
-        if (this.timeAccumulator >= 1000) {
-            const secondsPassed = Math.floor(this.timeAccumulator / 1000);
-            this.score += secondsPassed * SCORE_PER_SECOND;
-            this.timeAccumulator %= 1000;
-            this.checkMilestone(); // Check after score update
+        // Check if 0.2 seconds (200ms) has passed
+        const scoreInterval = 200; // ms
+        if (this.timeAccumulator >= scoreInterval) {
+            const intervalsPassed = Math.floor(this.timeAccumulator / scoreInterval);
+            // Adjust points added per interval if needed, e.g., SCORE_PER_SECOND / 5
+            const pointsPerInterval = SCORE_PER_SECOND / 5; // = 2 points per 0.2s
+            this.score += intervalsPassed * pointsPerInterval;
+            this.timeAccumulator %= scoreInterval; // Keep remainder
+            this.checkMilestone();
         }
 
-        // Update milestone display timer
-        if (this.milestoneTimer > 0) {
-            this.milestoneTimer -= deltaTime;
-            if (this.milestoneTimer <= 0) {
-                this.activeMilestone = null; // Hide milestone flash
-            }
-        }
+        // Removed milestone display timer logic
     }
 
     handleCollision() {
@@ -61,10 +57,10 @@ export class ScoreManager {
         for (const milestone of this.milestones) {
             if (!milestone.reached && this.score >= milestone.score) {
                 milestone.reached = true;
-                this.triggerMilestoneEffect(milestone.image); // Trigger image flash
+                // this.triggerMilestoneEffect(milestone.image); // Image flash handled by UI if needed
                 console.log(`Milestone reached: ${milestone.score}`);
                 if (this.assets) {
-                    this.assets.playSound('sfx_milestone');
+                    this.assets.playSound('sfx_milestone'); // Play sound
                 }
                 // Show text message via UI manager
                 const messageText = MILESTONE_MESSAGES[milestone.score] || `${milestone.score}!`;
@@ -76,32 +72,9 @@ export class ScoreManager {
         }
     }
 
-    triggerMilestoneEffect(imageName) {
-        const image = this.assets.getImage(imageName);
-        if (image) {
-            this.activeMilestone = image;
-            this.milestoneTimer = MILESTONE_DISPLAY_DURATION;
-        } else {
-            console.warn(`Milestone image not found: ${imageName}`);
-        }
-    }
+    // triggerMilestoneEffect removed - visual effect handled by UI
 
-    render(ctx, canvasWidth, canvasHeight) { // Added render method and canvas dimensions
-        // Draw active milestone flash (e.g., centered)
-        if (this.activeMilestone && this.milestoneTimer > 0) {
-            const imgWidth = this.activeMilestone.width;
-            const imgHeight = this.activeMilestone.height;
-            const x = canvasWidth / 2 - imgWidth / 2;
-            const y = canvasHeight / 4 - imgHeight / 2; // Position near top-center
-
-            // Optional: Add fade effect based on timer?
-            // ctx.globalAlpha = Math.min(1, this.milestoneTimer / 500); // Example fade out
-
-            ctx.drawImage(this.activeMilestone, x, y, imgWidth, imgHeight);
-
-            // ctx.globalAlpha = 1.0; // Reset alpha
-        }
-    }
+    // render method removed - rendering handled by UI
 
     getScore() {
         return this.score;

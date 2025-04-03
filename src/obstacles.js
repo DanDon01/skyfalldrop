@@ -1,100 +1,101 @@
-// Handles spawning and management of obstacles (birds, planes, balloons)
+import * as THREE from 'three';
 
-const OBSTACLE_TYPES = [
-    { name: 'bird_pigeon', fallbackWidth: 40, fallbackHeight: 30 },
-    { name: 'bird_crow', fallbackWidth: 50, fallbackHeight: 40 },
-    { name: 'plane_paper', fallbackWidth: 30, fallbackHeight: 20 },
-    { name: 'plane_jet', fallbackWidth: 80, fallbackHeight: 40 },
-    { name: 'plane_balloon', fallbackWidth: 60, fallbackHeight: 80 },
-];
+// Obstacle types mapping name to properties
+const OBSTACLE_TYPES = {
+    'bird_pigeon':   { fallbackWidth: 5, fallbackHeight: 4, movesHorizontally: true, minSpeedX: 15, maxSpeedX: 30 },
+    'bird_crow':     { fallbackWidth: 6, fallbackHeight: 5, movesHorizontally: true, minSpeedX: 20, maxSpeedX: 35 },
+    'plane_paper':   { fallbackWidth: 4, fallbackHeight: 2, movesHorizontally: true, minSpeedX: 5, maxSpeedX: 15 }, // Slower horizontal drift
+    'plane_jet':     { fallbackWidth: 10, fallbackHeight: 4, movesHorizontally: true, minSpeedX: 40, maxSpeedX: 70 }, // Faster
+    'plane_balloon': { fallbackWidth: 7, fallbackHeight: 9, movesHorizontally: false }, // Balloons just float up
+};
+const OBSTACLE_NAMES = Object.keys(OBSTACLE_TYPES);
 
 export class ObstacleManager {
-    constructor(canvas, assets) { // Added assets parameter
-        this.canvas = canvas;
-        this.assets = assets; // Store asset manager
-        this.obstacles = [];
+    constructor(scene, assets) {
+        this.scene = scene;
+        this.assets = assets;
+        this.obstacles = []; // Array to hold { mesh, boundingBox, velocityX }
         this.spawnTimer = 0;
-        this.spawnInterval = 1500; // Spawn every 1.5 seconds (adjust as needed)
+        this.spawnInterval = 0.8; // Spawn more frequently (adjust)
+        this.spawnArea = { x: 100, z: 50 }; // Width/Depth range for spawning
+        this.spawnHeight = -150; // Y-position below the player view to spawn obstacles
+        this.worldScrollSpeed = 25; // Base upward speed for all obstacles (adjust for feel)
     }
 
     spawn() {
-        // Select a random obstacle type
-        const typeIndex = Math.floor(Math.random() * OBSTACLE_TYPES.length);
-        const type = OBSTACLE_TYPES[typeIndex];
-        const image = this.assets.getImage(type.name);
+        // Select a random obstacle type name
+        const typeName = OBSTACLE_NAMES[Math.floor(Math.random() * OBSTACLE_NAMES.length)];
+        const typeInfo = OBSTACLE_TYPES[typeName];
+        const texture = this.assets.getTexture(typeName);
+        let velocityX = 0;
 
-        // Determine dimensions
-        const width = image ? image.width : type.fallbackWidth;
-        const height = image ? image.height : type.fallbackHeight;
+        // Determine horizontal velocity if applicable
+        if (typeInfo.movesHorizontally) {
+            const speedRange = typeInfo.maxSpeedX - typeInfo.minSpeedX;
+            velocityX = (Math.random() * speedRange + typeInfo.minSpeedX) * (Math.random() < 0.5 ? 1 : -1); // Random direction
+        }
 
-        // Spawn position and speed
-        const x = Math.random() * (this.canvas.width - width); // Adjust spawn based on width
-        const y = -height; // Start just above the screen based on height
-        const velocityY = 2 + Math.random() * 3; // Random downward speed
+        // Determine geometry and material (Using PlaneGeometry for all sprites)
+        const aspect = texture ? texture.image.width / texture.image.height : typeInfo.fallbackWidth / typeInfo.fallbackHeight;
+        // Use a consistent reference for size (e.g., height) and calculate width based on aspect ratio
+        const height = typeInfo.fallbackHeight;
+        const width = height * aspect;
 
-        this.obstacles.push({
-            x,
-            y,
-            width,
-            height,
-            velocityY,
-            image, // Store image reference
-            type: type.name, // Store type name for potential future use
-            color: 'red' // Fallback color
+        const geometry = new THREE.PlaneGeometry(width, height);
+        const material = new THREE.MeshBasicMaterial({
+            map: texture || null,
+            transparent: true, // Assume PNGs with transparency
+            alphaTest: 0.1,    // Adjust if needed based on textures
+            side: THREE.DoubleSide, // Render both sides just in case
+            color: texture ? 0xffffff : 0xff0000 // White tint if texture exists, red fallback
         });
+        const mesh = new THREE.Mesh(geometry, material);
+
+        // Set initial position (below screen)
+        mesh.position.x = (Math.random() - 0.5) * this.spawnArea.x;
+        mesh.position.y = this.spawnHeight;
+        mesh.position.z = (Math.random() - 0.5) * this.spawnArea.z; // Add depth variation
+
+        // Add to scene
+        this.scene.add(mesh);
+
+        // Create bounding box
+        const boundingBox = new THREE.Box3().setFromObject(mesh);
+
+        // Store obstacle data including velocity
+        this.obstacles.push({ mesh, boundingBox, velocityX });
     }
 
-    update(deltaTime) { // Added deltaTime parameter
-        // Update obstacle positions and check collisions
+    update(deltaTime) {
+        // --- Spawning ---
         this.spawnTimer += deltaTime;
         if (this.spawnTimer >= this.spawnInterval) {
             this.spawn();
-            this.spawnTimer = 0; // Reset timer
-            // Optional: Randomize next spawn interval slightly
-            // this.spawnInterval = 1000 + Math.random() * 1000;
+            this.spawnTimer = 0;
         }
 
-        // Update positions and remove off-screen obstacles
+        // --- Update Positions & Remove Off-screen ---
         for (let i = this.obstacles.length - 1; i >= 0; i--) {
-            const obs = this.obstacles[i];
-            obs.y += obs.velocityY; // Move down
+            const obsData = this.obstacles[i];
+            const obsMesh = obsData.mesh;
 
-            // Remove if off-screen
-            if (obs.y > this.canvas.height) {
-                this.obstacles.splice(i, 1);
+            // Move up based on world scroll speed
+            obsMesh.position.y += this.worldScrollSpeed * deltaTime;
+            // Apply horizontal movement if any
+            obsMesh.position.x += obsData.velocityX * deltaTime;
+
+            // Update bounding box after moving
+            obsData.boundingBox.setFromObject(obsMesh);
+
+            // Remove if far above the screen (adjust threshold as needed)
+            const removalHeight = 150; // How far above origin before removing
+            if (obsMesh.position.y > removalHeight) {
+                this.scene.remove(obsMesh);
+                // TODO: Properly dispose geometry and material if performance becomes an issue
+                // if (obsMesh.geometry) obsMesh.geometry.dispose();
+                // if (obsMesh.material) obsMesh.material.dispose();
+                this.obstacles.splice(i, 1); // Remove from array
             }
         }
-
-        // Collision detection will be handled in the main game loop or a dedicated collision system
-    }
-
-    // Method to check collision between a single obstacle and the player (circle)
-    checkCollisionWithPlayer(obstacle, player) {
-        // Find the closest point to the circle within the rectangle
-        const closestX = Math.max(obstacle.x, Math.min(player.x, obstacle.x + obstacle.width));
-        const closestY = Math.max(obstacle.y, Math.min(player.y, obstacle.y + obstacle.height));
-
-        // Calculate the distance between the circle's center and this closest point
-        const distanceX = player.x - closestX;
-        const distanceY = player.y - closestY;
-        const distanceSquared = (distanceX * distanceX) + (distanceY * distanceY);
-
-        // If the distance is less than the circle's radius squared, a collision occurred
-        return distanceSquared < (player.radius * player.radius);
-    }
-
-    render(ctx) {
-        // Render active obstacles
-        this.obstacles.forEach(obs => {
-            if (obs.image) {
-                // Draw the obstacle sprite
-                ctx.drawImage(obs.image, obs.x, obs.y, obs.width, obs.height);
-            } else {
-                // Fallback: Draw a simple rectangle if image failed to load
-                ctx.fillStyle = obs.color;
-                ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
-                // console.warn(`Obstacle image ${obs.type} not loaded, drawing fallback.`);
-            }
-        });
     }
 }
