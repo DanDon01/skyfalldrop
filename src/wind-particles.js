@@ -14,10 +14,15 @@ export class WindParticles {
     }
 
     init() {
-        const particleTexture = this.assets.getTexture('wind_particle'); // Use placeholder name
+        // Ensure assets object exists before trying to get texture
+        if (!this.assets) {
+             console.error("Assets manager not passed to WindParticles constructor!");
+             return;
+        }
+        const particleTexture = this.assets.getTexture('wind_particle');
         if (!particleTexture) {
-            console.warn("Wind particle texture not loaded, skipping wind initialization.");
-            return;
+            console.warn("Wind particle texture ('wind_particle.png') not loaded or found, skipping wind initialization.");
+            return; // Exit initialization if texture is missing
         }
 
         const particles = new THREE.BufferGeometry();

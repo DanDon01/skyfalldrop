@@ -12,44 +12,42 @@ export class Assets {
         // this.gltfLoader = new GLTFLoader(this.loadingManager); // Init later if needed
 
         this.loaded = false;
-        this.promises = []; // Track individual load promises if needed outside manager
+        // No longer need manual promises array if relying solely on LoadingManager
+        // this.promises = [];
 
         // Loading progress handlers (optional)
         this.loadingManager.onStart = (url, itemsLoaded, itemsTotal) => {
             console.log(`Started loading file: ${url}.\nLoaded ${itemsLoaded} of ${itemsTotal} files.`);
         };
         this.loadingManager.onLoad = () => {
-            console.log('All assets loaded via LoadingManager.');
+            // This callback is now set in main.js to trigger game initialization
+            console.log('LoadingManager internal onLoad: All assets loaded.'); // Added log
             this.loaded = true;
-            // Resolve a master promise if needed elsewhere
         };
         this.loadingManager.onProgress = (url, itemsLoaded, itemsTotal) => {
             console.log(`Loading file: ${url}.\nLoaded ${itemsLoaded} of ${itemsTotal} files.`);
             // Update loading bar UI here if implemented
         };
         this.loadingManager.onError = (url) => {
-            console.error('There was an error loading ' + url);
+            console.error('LoadingManager: There was an error loading ' + url);
         };
     }
 
     // --- Texture Loading ---
     loadTexture(name, path) {
-        const promise = new Promise((resolve) => {
-            this.textureLoader.load(
-                path,
-                (texture) => { // onLoad
-                    this.textures[name] = texture;
-                    console.log(`Texture loaded: ${name} (${path})`);
-                    resolve(texture);
-                },
-                undefined, // onProgress - handled by manager
-                (err) => { // onError
-                    console.error(`Failed to load texture: ${name} (${path})`, err);
-                    resolve(null); // Resolve null so Promise.all doesn't break
-                }
-            );
-        });
-        this.promises.push(promise); // Still track promises for potential external use
+        // No need to return or track promise here, LoadingManager handles it
+        this.textureLoader.load(
+            path,
+            (texture) => { // onLoad
+                this.textures[name] = texture;
+                console.log(`Texture loaded: ${name} (${path})`);
+            },
+            undefined, // onProgress - handled by manager
+            (err) => { // onError
+                console.error(`Failed to load texture: ${name} (${path})`, err);
+                // LoadingManager's onError will also fire
+            }
+        );
     }
 
     getTexture(name) {
@@ -58,29 +56,25 @@ export class Assets {
 
     // --- Audio Loading ---
     loadAudio(name, path, loop = false) {
-        const promise = new Promise((resolve) => {
-            const audioListener = new THREE.AudioListener(); // Need listener for positional audio later
-            const audio = new THREE.Audio(audioListener); // Use THREE.Audio
+        // No need to return or track promise here
+        const audioListener = new THREE.AudioListener(); // Create listener here
+        const audio = new THREE.Audio(audioListener);
 
-            const audioLoader = new THREE.AudioLoader(this.loadingManager);
-            audioLoader.load(
-                path,
-                (buffer) => { // onLoad
-                    audio.setBuffer(buffer);
-                    audio.setLoop(loop);
-                    audio.setVolume(loop ? 0.3 : 0.7); // Example: lower volume for music
-                    this.audio[name] = audio;
-                    console.log(`Audio loaded: ${name} (${path})`);
-                    resolve(audio);
-                },
-                undefined, // onProgress
-                (err) => { // onError
-                    console.error(`Failed to load audio: ${name} (${path})`, err);
-                    resolve(null);
-                }
-            );
-        });
-        this.promises.push(promise);
+        const audioLoader = new THREE.AudioLoader(this.loadingManager);
+        audioLoader.load(
+            path,
+            (buffer) => { // onLoad
+                audio.setBuffer(buffer);
+                audio.setLoop(loop);
+                audio.setVolume(loop ? 0.3 : 0.7);
+                this.audio[name] = audio;
+                console.log(`Audio loaded: ${name} (${path})`);
+            },
+            undefined, // onProgress
+            (err) => { // onError
+                console.error(`Failed to load audio: ${name} (${path})`, err);
+            }
+        );
     }
 
     getAudio(name) {
@@ -91,7 +85,7 @@ export class Assets {
         const sound = this.getAudio(name);
         if (sound) {
             if (sound.isPlaying) {
-                sound.stop(); // Stop previous playback before starting again
+                sound.stop();
             }
             sound.play();
         } else {
@@ -104,10 +98,10 @@ export class Assets {
     // getModel(name) { ... }
 
     // --- Load All Assets ---
-    async loadAll() { // Make async again to use await Promise.all
+    loadAll() { // No longer async, just initiates loads
         console.log("Starting asset loading (Three.js)...");
 
-        // Textures (using names from required_assets.md)
+        // Textures
         this.loadTexture('player', 'textures/player.png');
         this.loadTexture('bird_pigeon', 'textures/bird_pigeon.png');
         this.loadTexture('bird_crow', 'textures/bird_crow.png');
@@ -115,8 +109,7 @@ export class Assets {
         this.loadTexture('plane_jet', 'textures/plane_jet.png');
         this.loadTexture('plane_balloon', 'textures/plane_balloon.png');
         this.loadTexture('cloud_billboard', 'textures/cloud_billboard.png');
-        this.loadTexture('wind_particle', 'textures/wind_particle.png'); // Added wind particle
-        // this.loadTexture('portal_effect', 'textures/portal_effect.png'); // If needed for portal shader
+        this.loadTexture('wind_particle', 'textures/wind_particle.png');
 
         // Audio
         this.loadAudio('background_music', 'audio/background_loop.mp3', true);
@@ -129,13 +122,7 @@ export class Assets {
         // Models (Add later)
         // this.loadModel('player_model', 'models/player.glb');
 
-        // Although LoadingManager handles its queue, awaiting promises here
-        // ensures this function doesn't resolve until *all* tracked loads finish/error.
-        // This might be redundant depending on how LoadingManager.onLoad is used in main.js,
-        // but provides an explicit completion point for loadAll itself.
-        await Promise.all(this.promises);
-
-        console.log("Asset loading initiated. Completion handled by LoadingManager.onLoad.");
-        // The 'loaded' flag is set true within the LoadingManager.onLoad callback.
+        console.log("Asset loading initiated. Completion handled by LoadingManager.onLoad in main.js.");
+        // No await Promise.all needed here
     }
 }

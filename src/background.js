@@ -52,10 +52,15 @@ export class Background {
     }
 
     initClouds() {
+        // Ensure assets object exists before trying to get texture
+        if (!this.assets) {
+             console.error("Assets manager not passed to Background constructor!");
+             return;
+        }
         const cloudTexture = this.assets.getTexture('cloud_billboard');
         if (!cloudTexture) {
-            console.warn("Cloud texture not loaded, skipping cloud initialization.");
-            return;
+            console.warn("Cloud texture ('cloud_billboard.png') not loaded or found, skipping cloud initialization.");
+            return; // Exit initialization if texture is missing
         }
 
         // Define layers: count, size, speed factor (relative to world scroll), z-depth range

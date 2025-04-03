@@ -41,44 +41,62 @@ class Game {
     // Separate initialization of core Three.js components
     initThreeJS() {
         this.scene = new THREE.Scene();
+        this.scene.background = new THREE.Color(0x112233); // Add a dark blue background color
 
         const fov = 75;
         const aspect = window.innerWidth / window.innerHeight;
         const near = 0.1;
         const far = 2000;
         this.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-        this.camera.position.set(0, 0, 30); // Adjust camera position for centered player
+        this.camera.position.set(0, 15, 60); // Adjusted camera position
         this.camera.lookAt(0, 0, 0);
 
         const canvas = document.getElementById('game');
         this.renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setPixelRatio(window.devicePixelRatio);
+        this.renderer.autoClear = true; // Explicitly ensure autoClear is true
 
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7); // Slightly brighter ambient
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
         this.scene.add(ambientLight);
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0); // Slightly brighter directional
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
         directionalLight.position.set(50, 100, 75);
         this.scene.add(directionalLight);
+
+        // Test Cube (keep for debugging)
+        const testGeo = new THREE.BoxGeometry(5, 5, 5);
+        const testMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+        const testCube = new THREE.Mesh(testGeo, testMat);
+        testCube.position.set(0, 0, 0);
+        this.scene.add(testCube);
+        console.log("Added test cube to scene.");
 
         window.addEventListener('resize', () => this.onWindowResize());
     }
 
     // Main initialization function
     init() {
-        this.initThreeJS(); // Setup scene, camera, renderer first
-        this.renderLoadingScreen(); // Draw once before assets load
+        this.initThreeJS();
+        // No initial renderLoadingScreen call needed here
 
         this.assets = new Assets();
+        // Define the callback for when loading is complete *before* calling loadAll
         this.assets.loadingManager.onLoad = () => {
-            console.log("Assets loaded, initializing game components...");
-            this.initializeGameComponents();
-            this.isLoading = false;
-            this.tryStartMusic();
-            console.log("Loading complete. Starting animation loop...");
-            this.animate();
+            console.log("Assets loaded (LoadingManager.onLoad in main.js triggered), initializing game components...");
+            try {
+                this.initializeGameComponents();
+                this.isLoading = false; // Mark loading complete AFTER components init
+                this.tryStartMusic();
+                console.log("Game components initialized successfully. Starting animation loop...");
+                // No need to call animate() here, it's already requested by the isLoading check in animate()
+            } catch (error) {
+                console.error("Error during game component initialization:", error);
+                // Handle initialization error (e.g., show error message)
+                this.isLoading = true; // Keep in loading state on error
+            }
         };
-        this.assets.loadAll();
+        this.assets.loadAll(); // Start the loading process
+        this.animate(); // Start the animation loop immediately (it will handle isLoading)
     }
 
     // Initialize game components AFTER assets are loaded
@@ -103,7 +121,7 @@ class Game {
         this.setupPortals();
         this.addInteractionListener();
 
-        console.log("Game components initialized.");
+        // console.log("Game components initialized."); // Moved log to onLoad callback
     }
 
 
@@ -115,23 +133,22 @@ class Game {
     }
 
     animate() {
+        requestAnimationFrame(this.animate); // Request next frame immediately
+
         if (this.isLoading) {
-             requestAnimationFrame(this.animate);
-             return;
+             this.renderLoadingScreen(); // Render loading screen while loading
+             return; // Skip game logic and rendering until loaded
         }
 
-        requestAnimationFrame(this.animate);
-
+        // --- Game Logic ---
         const rawDeltaTime = this.clock.getDelta();
         const deltaTime = this.snapshotManager ? this.snapshotManager.getEffectiveDeltaTime(rawDeltaTime) : rawDeltaTime;
-
-        // Determine world scroll speed (can be dynamic later)
         const worldScrollSpeed = this.obstacleManager ? this.obstacleManager.worldScrollSpeed : 20;
 
         // Update components
-        if (this.background) this.background.update(deltaTime, worldScrollSpeed); // Pass scroll speed
+        if (this.background) this.background.update(deltaTime, worldScrollSpeed);
         if (this.player) this.player.update(deltaTime, this.controls, this.touchControls);
-        if (this.obstacleManager) this.obstacleManager.update(deltaTime); // Obstacles use their own speed + world speed
+        if (this.obstacleManager) this.obstacleManager.update(deltaTime);
         if (this.scoreManager) this.scoreManager.update(deltaTime * 1000);
         if (this.snapshotManager) this.snapshotManager.update(rawDeltaTime * 1000);
         if (this.windParticles) this.windParticles.update(deltaTime);
@@ -154,16 +171,25 @@ class Game {
     }
 
     renderLoadingScreen() {
+        // This function might not be strictly necessary if the HTML handles initial state
+        // But can be used to draw over the canvas if needed before Three.js starts
         const canvas = document.getElementById('game');
-        if (canvas) {
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-                ctx.fillStyle = '#333';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = 'white';
-                ctx.font = '24px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('Loading Assets...', canvas.width / 2, canvas.height / 2);
+        if (canvas && this.isLoading) { // Only draw if still loading
+            // Temporarily get 2D context ONLY if WebGL context hasn't been created yet
+            // This is tricky and might cause issues. A pure HTML loading indicator is safer.
+            try {
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.fillStyle = '#333'; // Dark background
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = 'white';
+                    ctx.font = '24px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Loading Assets...', canvas.width / 2, canvas.height / 2);
+                    // console.log("Drawing 2D loading screen"); // Reduce console noise
+                }
+            } catch (e) {
+                // Likely WebGL context already exists, ignore error
             }
         }
     }
