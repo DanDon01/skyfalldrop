@@ -22,7 +22,7 @@
 - [x] **Portal:** (main.js: Integrated provided Three.js portal code - creation, animation, collision checks)
 - [x] **Snapshot:** (snapshot.js: Adapted for 3D context, integrated slow-mo timing, basic WebGL capture placeholder)
 - [x] **UI:** (ui.js: Refactored for HTML overlay. main.js: Integrated HTML UI updates)
-- [x] **Asset Loading:** (assets.js: Refactored for Three.js TextureLoader, AudioLoader, LoadingManager. main.js: Integrated LoadingManager flow)
+- [x] **Asset Loading:** (assets.js: Refactored for Three.js loaders & LoadingManager. main.js: Integrated LoadingManager flow & component asset passing. Corrected loadAll.)
 - [x] **Wind Particles:** (wind-particles.js: Created and integrated upward moving particles)
 
 ## Asset Integration (3D - Placeholders)
