@@ -2,15 +2,7 @@ import * as THREE from 'three';
 
 export class WindParticles {
     constructor(scene, assets) {
-        this.scene = scene;
-        this.assets = assets;
-        this.particleSystem = null;
-        this.particleCount = 150; // Adjust count as needed
-        this.particleSpeed = 40; // Adjust speed
-        this.spawnArea = { x: 150, z: 100 }; // Area within which particles spawn/wrap
-        this.verticalRange = 200; // Total vertical distance particles travel before wrapping
-
-        this.init();
+        console.log("Wind particles are disabled (wind_particle.png not used).");
     }
 
     init() {

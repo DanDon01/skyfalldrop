@@ -106,21 +106,14 @@ export class Assets {
         this.loadTexture('bird_pigeon', 'textures/bird_pigeon.png');
         this.loadTexture('bird_crow', 'textures/bird_crow.png');
         this.loadTexture('plane_paper', 'textures/plane_paper.png');
-        this.loadTexture('plane_jet', 'textures/plane_jet.png');
         this.loadTexture('plane_balloon', 'textures/plane_balloon.png');
-        this.loadTexture('cloud_billboard', 'textures/cloud_billboard.png');
-        this.loadTexture('wind_particle', 'textures/wind_particle.png');
 
         // Audio
         this.loadAudio('background_music', 'audio/background_loop.mp3', true);
-        this.loadAudio('sfx_hit', 'audio/sfx_hit_bounce.wav');
-        this.loadAudio('sfx_milestone', 'audio/sfx_milestone_ping.wav');
-        this.loadAudio('sfx_portal', 'audio/sfx_portal_warp.wav');
-        this.loadAudio('sfx_snap_click', 'audio/sfx_snapshot_click.wav');
-        this.loadAudio('sfx_snap_slowmo', 'audio/sfx_snapshot_slowmo.wav');
-
-        // Models (Add later)
-        // this.loadModel('player_model', 'models/player.glb');
+        this.loadAudio('sfx_milestone', 'audio/sfx_milestone_ping.mp3');
+        this.loadAudio('sfx_portal', 'audio/sfx_portal_warp.mp3');
+        this.loadAudio('sfx_snap_click', 'audio/sfx_snapshot_click.mp3');
+        this.loadAudio('sfx_snap_slowmo', 'audio/sfx_snapshot_slowmo.mp3');
 
         console.log("Asset loading initiated. Completion handled by LoadingManager.onLoad in main.js.");
         // No await Promise.all needed here

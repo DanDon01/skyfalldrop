@@ -34,7 +34,37 @@ class Game {
         this.isLoading = true; // Start in loading state
 
         this.init();
-        this.animate = this.animate.bind(this);
+        // Use an arrow function for animate to preserve 'this'
+        this.animate = () => {
+            requestAnimationFrame(this.animate);
+            if (this.isLoading) {
+                this.renderLoadingScreen();
+                return;
+            }
+            // --- Game Logic ---
+            const rawDeltaTime = this.clock.getDelta();
+            const deltaTime = this.snapshotManager ? this.snapshotManager.getEffectiveDeltaTime(rawDeltaTime) : rawDeltaTime;
+            const worldScrollSpeed = this.obstacleManager ? this.obstacleManager.worldScrollSpeed : 20;
+            // Update components
+            if (this.background) this.background.update(deltaTime, worldScrollSpeed);
+            if (this.player) this.player.update(deltaTime, this.controls, this.touchControls);
+            if (this.obstacleManager) this.obstacleManager.update(deltaTime);
+            if (this.scoreManager) this.scoreManager.update(deltaTime * 1000);
+            if (this.snapshotManager) this.snapshotManager.update(rawDeltaTime * 1000);
+            if (this.windParticles) this.windParticles.update(deltaTime);
+            // Update UI
+            if (this.ui && this.scoreManager) {
+                this.ui.updateScore(this.scoreManager.getScore());
+            }
+            // Check Collisions
+            this.checkCollisions();
+            this.checkPortalCollisions();
+            // Animate Portal Particles
+            if (this.animateStartPortalParticles) this.animateStartPortalParticles();
+            if (this.animateExitPortalParticles) this.animateExitPortalParticles();
+            // Render Scene
+            this.renderer.render(this.scene, this.camera);
+        };
         this.clock = new THREE.Clock();
     }
 
@@ -130,44 +160,6 @@ class Game {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-    }
-
-    animate() {
-        requestAnimationFrame(this.animate); // Request next frame immediately
-
-        if (this.isLoading) {
-             this.renderLoadingScreen(); // Render loading screen while loading
-             return; // Skip game logic and rendering until loaded
-        }
-
-        // --- Game Logic ---
-        const rawDeltaTime = this.clock.getDelta();
-        const deltaTime = this.snapshotManager ? this.snapshotManager.getEffectiveDeltaTime(rawDeltaTime) : rawDeltaTime;
-        const worldScrollSpeed = this.obstacleManager ? this.obstacleManager.worldScrollSpeed : 20;
-
-        // Update components
-        if (this.background) this.background.update(deltaTime, worldScrollSpeed);
-        if (this.player) this.player.update(deltaTime, this.controls, this.touchControls);
-        if (this.obstacleManager) this.obstacleManager.update(deltaTime);
-        if (this.scoreManager) this.scoreManager.update(deltaTime * 1000);
-        if (this.snapshotManager) this.snapshotManager.update(rawDeltaTime * 1000);
-        if (this.windParticles) this.windParticles.update(deltaTime);
-
-        // Update UI
-        if (this.ui && this.scoreManager) {
-            this.ui.updateScore(this.scoreManager.getScore());
-        }
-
-        // Check Collisions
-        this.checkCollisions();
-        this.checkPortalCollisions();
-
-        // Animate Portal Particles
-        if (this.animateStartPortalParticles) this.animateStartPortalParticles();
-        if (this.animateExitPortalParticles) this.animateExitPortalParticles();
-
-        // Render Scene
-        this.renderer.render(this.scene, this.camera);
     }
 
     renderLoadingScreen() {

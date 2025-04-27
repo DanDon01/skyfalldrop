@@ -42,12 +42,20 @@ export class Player {
         // Manually adjust Box3 size if needed for better fit
         // this.boundingBox.expandByScalar(-1); // Example: slightly shrink box
 
-        // Collision Flash properties (placeholder - implement later)
-        // this.isFlashing = false;
-        // this.flashDuration = 150;
-        // this.flashTimer = 0;
-        // this.flashColor = 0xffa500; // Orange in hex
-        // this.originalColor = material.color.getHex();
+        // Collision Flash properties
+        this.isFlashing = false;
+        this.flashDuration = 150; // ms
+        this.flashTimer = 0;
+        this.flashColor = 0xffa500; // Orange
+        this.originalColor = material.color.getHex();
+
+        // Trail properties
+        this.trail = [];
+        this.trailInterval = 0.04; // seconds between trail spawns
+        this.trailTimer = 0;
+        this.trailMax = 18; // Max trail ghosts
+        this.trailFadeTime = 0.5; // seconds before ghost fades out
+        this.trailAlpha = 0.35; // Starting alpha for trail ghosts
 
         console.log("3D Player initialized");
     }
@@ -64,9 +72,6 @@ export class Player {
         // Update horizontal position
         this.mesh.position.x += moveDirectionX * this.moveSpeed * deltaTime;
 
-        // --- Falling (Removed - Player stays vertically centered) ---
-        // this.mesh.position.y += this.velocity.y * deltaTime;
-
         // --- Bounds Checking (Horizontal only) ---
         const horizontalLimit = 50;
         if (this.mesh.position.x < -horizontalLimit) {
@@ -76,39 +81,63 @@ export class Player {
             this.mesh.position.x = horizontalLimit;
         }
 
-        // Floor limit (optional - game might not have one)
-        // const floorLimit = -100;
-        // if (this.mesh.position.y < floorLimit) {
-        //     this.mesh.position.y = floorLimit;
-        //     this.velocity.y = 0;
-        // }
-
         // --- Update Bounding Box ---
         this.boundingBox.setFromObject(this.mesh);
 
-        // --- Collision Flash Update (Implement later) ---
-        // if (this.isFlashing) { ... }
+        // --- Collision Flash Update ---
+        if (this.isFlashing) {
+            this.flashTimer -= deltaTime * 1000; // deltaTime is in seconds
+            if (this.flashTimer > 0) {
+                this.mesh.material.color.setHex(this.flashColor);
+            } else {
+                this.mesh.material.color.setHex(this.originalColor);
+                this.isFlashing = false;
+            }
+        }
 
-        // --- Trail Update (Implement later) ---
-        // this.updateTrail(deltaTime);
+        // --- Trail Update ---
+        this.updateTrail(deltaTime);
+    }
+
+    updateTrail(deltaTime) {
+        this.trailTimer += deltaTime;
+        if (this.trailTimer >= this.trailInterval) {
+            this.trailTimer = 0;
+            // Create a faded ghost of the player mesh
+            const ghost = this.mesh.clone();
+            ghost.material = this.mesh.material.clone();
+            ghost.material.transparent = true;
+            ghost.material.opacity = this.trailAlpha;
+            ghost.position.copy(this.mesh.position);
+            ghost.position.z -= 0.5; // Slightly behind
+            this.scene.add(ghost);
+            this.trail.push({ mesh: ghost, time: 0 });
+            // Limit trail length
+            if (this.trail.length > this.trailMax) {
+                const old = this.trail.shift();
+                this.scene.remove(old.mesh);
+            }
+        }
+        // Fade and remove old ghosts
+        for (let i = this.trail.length - 1; i >= 0; i--) {
+            const t = this.trail[i];
+            t.time += deltaTime;
+            if (t.time > this.trailFadeTime) {
+                this.scene.remove(t.mesh);
+                this.trail.splice(i, 1);
+            } else {
+                t.mesh.material.opacity = this.trailAlpha * (1 - t.time / this.trailFadeTime);
+            }
+        }
     }
 
     handleCollision() {
-        // Adapt bounce for 3D - Player doesn't move vertically,
-        // so bounce might affect world speed or trigger visual effect only.
-        // For now, just log it. We'll add visual flash later.
-        // this.velocity.y = 10; // No longer applicable
-
-        // Trigger visual flash (Implement later)
-        // this.isFlashing = true;
-        // this.flashTimer = this.flashDuration;
-        // this.mesh.material.color.setHex(this.flashColor);
-
+        // Trigger visual flash
+        this.isFlashing = true;
+        this.flashTimer = this.flashDuration;
+        this.mesh.material.color.setHex(this.flashColor);
         console.log("Player collision handled (3D)");
     }
-
-    // updateTrail(deltaTime) { ... Refactor for 3D trail ... }
-    // renderTrail(ctx) { ... Remove or refactor for 3D trail ... }
 
     // No render method needed here, handled by main loop
 }
