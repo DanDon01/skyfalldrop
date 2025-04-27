@@ -94,12 +94,12 @@ class Game {
         this.scene.add(directionalLight);
 
         // Test Cube (keep for debugging)
-        const testGeo = new THREE.BoxGeometry(5, 5, 5);
-        const testMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-        const testCube = new THREE.Mesh(testGeo, testMat);
-        testCube.position.set(0, 0, 0);
-        this.scene.add(testCube);
-        console.log("Added test cube to scene.");
+        // const testGeo = new THREE.BoxGeometry(5, 5, 5);
+        // const testMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+        // const testCube = new THREE.Mesh(testGeo, testMat);
+        // testCube.position.set(0, 0, 0);
+        // this.scene.add(testCube);
+        // console.log("Added test cube to scene.");
 
         window.addEventListener('resize', () => this.onWindowResize());
     }
