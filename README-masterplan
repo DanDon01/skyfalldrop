@@ -4,16 +4,16 @@ Skyfall Drop: Project Blueprint
 TL;DR
 
 A vibe-first, mobile-friendly free-fall arcade game. Build with intent to deploy on fly.io, include all file structure and dependencies.
-Instant play. No death. No pause. Just pure motion, juicy score progression, and a clean portal exit to your next game or someone else’s. 
+Instant play. No death. No pause. Just pure motion, juicy score progression, and a clean portal exit to your next game or someone else's. 
 Designed to feel good, look cool, and get shared.
 
 ⸻
 
 Core Features
-	•	Instant Start: You’re falling the moment it loads. No title screen fluff.
+	•	Instant Start: You're falling the moment it loads. No title screen fluff.
 	•	Left/Right Dodge: Avoid birds, planes, and sky chaos. Touch + keyboard support.
 	•	Score Builder: Score climbs the longer you survive. Hitting stuff reduces score.
-	•	No Death: It’s about rhythm, not punishment. Collisions just slow you down.
+	•	No Death: It's about rhythm, not punishment. Collisions just slow you down.
 	•	Portal Exit: Reach a score/time threshold and unlock a portal to exit.
 	•	Mobile-First: Fully responsive canvas. Touch controls come first.
 	•	VibeShot: Snapshot mode to flex your score with style. Pose, slow-mo, screenshot.
@@ -69,7 +69,7 @@ Sprites / PNGs
 	•	Planes (paper plane, jet, balloon)
 	•	Clouds (3–4 layers of fluff, transparent)
 	•	Portal (glowing ring or dimensional rift)
-	•	Score milestone flashes (“1,000!” / “10K Club”)
+	•	Score milestone flashes ("1,000!" / "10K Club")
 
 Audio
 	•	Lo-fi background loop
@@ -96,7 +96,7 @@ Mobile
 	•	Optionally: virtual buttons or tilt (later)
 
 Snapshot
-	•	“Snap” button appears early in the fall
+	•	"Snap" button appears early in the fall
 	•	Triggers slow motion, player pose, score zoom
 	•	Screenshot via html2canvas or prompt to screenshot manually
 	•	Shows watermark: @AI_TechnoKing and game URL
@@ -148,7 +148,7 @@ Launch Checklist
 Post-Launch Ideas
 	•	Seasonal themes (e.g. Skyfall Drop: Snow Drift)
 	•	Community portal clusters (randomised destination pools)
-	•	“Portal Roulette” mode – you never know where you’ll end up
+	•	"Portal Roulette" mode – you never know where you'll end up
 
 ⸻
 
@@ -157,4 +157,52 @@ Your Branding
 	•	X Handle: @AI_TechnoKing
 	•	Logo: In /assets/logo.png (see brand mockup)
 	•	Theme: Chill arcade + visual flex
+
+## Visual Improvements - Additional Ideas
+
+### Dynamic Sky Gradient Background
+- Implement a gradually changing sky color based on score or play time
+- Transition from dawn → day → sunset → night
+- **Implementation:** Use a shader material for the background with time-based color interpolation. Can be done with multiple plane meshes at different depths or a skybox.
+
+### Player Trail Effects
+- Add a trailing effect behind the player as they move
+- Could be particle-based or ribbon-like 
+- Different trail colors/effects as score increases
+- **Implementation:** Create a particle system that spawns particles at the player's position, or use THREE.js line renderer with points that follow previous player positions.
+
+### Score Milestone Celebrations
+- Visual flourishes when hitting score thresholds (1000, 5000, etc.)
+- Screen flash, particle bursts, or temporary visual effects
+- **Implementation:** Add event listeners for score milestones that trigger timed visual effects like screen flashes or particle bursts.
+
+### Environmental Elements
+- Add distant flocks of birds that occasionally fly across
+- Floating clouds at different depths for parallax effect
+- Occasional weather effects (shooting stars, meteors, etc.)
+- **Implementation:** Create simple sprite objects at varying distances and move them across the screen at different speeds. Use opacity to create depth perception.
+
+### Enhanced Obstacle Variety
+- More visually distinct obstacle types
+- Obstacles with subtle animations or effects
+- Add obstacles that break apart on collision
+- **Implementation:** Extend the obstacle class to include animation states and fragment generation on collision.
+
+### Lighting and Shader Effects
+- Add bloom/glow effects to certain elements
+- Dynamic lighting based on scene context 
+- Vignette effect that intensifies during near-misses
+- **Implementation:** Use THREE.js post-processing effects like EffectComposer with selective bloom shaders. Vignette can be implemented as a simple full-screen quad with a special shader.
+
+### UI Polish
+- More stylized score counter with animations for digit changes
+- Minimalist UI that appears/disappears contextually
+- Visual pulse effects when score increases
+- **Implementation:** Use CSS animations for UI elements and GSAP for more complex transitions. Consider SVG for custom UI elements.
+
+### Visual Feedback
+- Camera shake on collisions or near-misses
+- Subtle screen-edge effects to enhance speed perception
+- Flash effects and particles on collisions
+- **Implementation:** Use GSAP to temporarily adjust camera position for shake effects. For screen-edge speed lines, use a quad with a specialized shader at the edges of the view.
 

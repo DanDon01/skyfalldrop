@@ -1,67 +1,92 @@
-# Skyfall Drop - Development Progress (PIVOT TO THREE.JS)
-*Note: This file should be kept up-to-date with changes.*
+# Project Progress Checklist
 
-**Goal:** Refactor the game to use Three.js for a 3D free-falling experience (player static vertically, world moves up), maintaining core mechanics.
+## Core Setup
+- [x] Initialize project (`npm create vite@latest`, choose Vanilla JS)
+- [x] Install Three.js (`npm install three`)
+- [x] Basic HTML structure (`public/index.html`)
+- [x] Main JavaScript entry point (`public/main.js`)
+- [x] Basic scene, camera, renderer setup
+- [x] Animation loop (`requestAnimationFrame`)
 
-## Initial Setup
-- [x] Read `README-masterplan`.
-- [x] Create `progress.md`.
-- [x] Review and adjust initial file structure.
-- [x] **Install Three.js dependency.**
-- [x] **Update `required_assets.md` for 3D.**
+## Player
+- [x] Create player module (`public/player.js`)
+- [x] Add player representation (Sprite/Plane) to scene
+- [x] Load player texture
+- [x] Implement basic player movement controls (Keyboard/Touch)
+  - Keyboard: Left/Right/Up/Down (Vertical limited range)
+  - Touch: Direct drag (Horizontal/Vertical limited range)
+- [x] Add gravity/falling simulation
+- [x] Implement screen boundaries for player movement
+- [x] Player stops falling visually at screen center, background scrolls
 
-## Core Feature Refactoring (3D)
-- [x] **Setup Three.js Scene:** (main.js: Scene, Camera, Renderer, Lighting, Loop, Clock)
-- [ ] **Player:** (player.js: Keep player vertically centered, adapt movement)
-- [ ] **Obstacles:** (obstacles.js: Spawn low, move up, add horizontal movement for some types)
-- [ ] **Background:** (background.js: Refactor clouds for upward movement, add distinct layers)
-- [x] **Controls:** (controls.js, controls-touch.js: Existing logic compatible with basic 3D movement)
-- [ ] **Collision Detection:** (main.js: Re-verify with new movement)
-- [ ] **Collision Response:** (player.js, score.js: Adapt bounce/flash/score reduction)
-- [ ] **Score:** (score.js: Increase update frequency)
-- [x] **Portal:** (main.js: Integrated provided Three.js portal code - creation, animation, collision checks)
-- [x] **Snapshot:** (snapshot.js: Adapted for 3D context, integrated slow-mo timing, basic WebGL capture placeholder)
-- [x] **UI:** (ui.js: Refactored for HTML overlay. main.js: Integrated HTML UI updates)
-- [x] **Asset Loading:** (assets.js: Refactored for Three.js loaders & LoadingManager. main.js: Integrated LoadingManager flow & component asset passing. Corrected loadAll.)
-- [x] **Wind Particles:** (wind-particles.js: Created and integrated upward moving particles)
+## Background & Environment
+- [x] Create scrolling background (`public/background.js`)
+- [x] Load background textures/elements
+- [x] Implement texture scrolling based on player fall speed
+- [x] Add dynamic background color tinting overlay
+- [ ] Implement parallax scrolling effect
+- [ ] Add environmental elements (e.g., clouds, wind particles)
 
-## Asset Integration (3D - Placeholders)
-- [x] Player Model/Texture (Texture applied to basic plane)
-- [x] Obstacle Models/Textures (Textures applied to planes/boxes)
-- [x] Skybox Textures / Cloud Textures (Basic gradient sky + layered cloud particles implemented)
-- [x] Portal Assets (Code-generated portals implemented)
-- [x] Milestone FX (HTML UI message implemented)
-- [x] Background Music Loop (Loading and playback implemented)
-- [x] Sound Effects (Loading and playback implemented)
-- [x] Font Integration (Handled with HTML UI)
-- [x] Wind Particle Texture (Added to required_assets.md, loaded in assets.js)
+## Obstacles
+- [x] Design obstacle types (e.g., static, moving, destructible)
+- [x] Create obstacle module (`public/obstacle.js`)
+- [x] Implement obstacle generation/spawning logic (`public/obstacleManager.js`)
+- [x] Add collision detection (Player vs. Obstacles)
 
-## UI Implementation (3D)
-- [x] Score Display (HTML Overlay)
-- [x] Milestone Messages (HTML Overlay)
-- [x] Snapshot Button (HTML Overlay)
+## Gameplay Mechanics
+- [x] Scoring system
+- [ ] Portal exit system (after reaching score threshold)
+- [ ] Difficulty progression (e.g., faster scrolling, more obstacles)
+- [ ] VibeShot snapshot mode
 
-## Polish & Refinement (3D)
-- [ ] Visual Feedback (3D effects for collisions/milestones)
-- [ ] Player Trail Logic (3D trail effect - needs refactoring)
-- [ ] Input Responsiveness Tuning
-- [ ] Performance Optimization (WebGL specific)
+## UI/UX
+- [x] Display score
+- [ ] Portal indicator
+- [ ] Touch control indicators (optional)
+- [ ] VibeShot button
 
-## Launch Checklist (Re-evaluate after refactor)
-- [ ] Mobile-first canvas confirmed
-- [ ] Touch + keyboard controls confirmed
-- [ ] 3D visual style confirmed
-- [ ] Background music + SFX confirmed
-- [ ] Score counter + milestones confirmed
-- [ ] Object collisions confirmed
-- [ ] Snapshot mode confirmed
-- [ ] Portal trigger/functionality confirmed
-- [ ] Lightweight & fast loading confirmed
-- [ ] Deployment (Placeholder - skyfalldrop.com)
+## Audio
+- [ ] Add background music
+- [ ] Add sound effects (collision, score, etc.)
 
-## Stretch Goals (Post-MVP)
-- [ ] Trail styles unlocked by score
-- [ ] Day/Night sky shift
+## Portal Exit System
+- [ ] Create portal module (`public/portal.js`)
+- [ ] Implement portal appearance at score threshold
+- [ ] Add portal visual effects
+- [ ] Handle player entering portal
+- [ ] Implement transition to destination URL
+
+## VibeShot Feature
+- [ ] Create snapshot module (`public/snapshot.js`) 
+- [ ] Implement slow-motion and camera adjustment
+- [ ] Add score overlay for screenshots
+- [ ] Include watermark with branding
+- [ ] Allow players to save/share screenshots
+
+## Refinement & Polish
+- [ ] Code cleanup and optimization
+- [ ] Cross-browser testing
+- [ ] Performance monitoring
+- [ ] Bug fixing
+
+## Advanced Features
+- [ ] Day/Night cycle based on play duration
+- [ ] Player trail effects
 - [ ] Dynamic weather layers
-- [ ] Global/local leaderboard
-- [ ] Random daily sky seeds
+- [ ] Seasonal themes
+
+## Scoring & UI
+- [ ] Create ScoreManager (`src/score.js`)
+- [ ] Increment score based on time/distance
+- [ ] Display score on HTML UI (`src/ui.js`)
+- [ ] Add milestone indicators/sounds
+- [ ] Display game over message
+
+## Game State & Flow
+- [ ] Manage game states (Loading, Playing, Game Over) (`src/gameState.js`)
+- [ ] Implement game start logic
+
+## Build & Deployment
+- [ ] Setup build process (e.g., Vite, Webpack)
+- [ ] Create production build
+- [ ] Deploy to hosting platform
