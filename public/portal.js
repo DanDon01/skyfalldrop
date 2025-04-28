@@ -16,11 +16,22 @@ export class Portal {
         // Portal destination URL (can be updated)
         this.destinationUrl = "https://aitechnoking.com"; // Default destination
         
-        // Load textures
-        this.textureLoader = new THREE.TextureLoader();
-        this.portalTexture = this.textureLoader.load('textures/portal.png');
-        
-        this.createPortal();
+        // Load the portal texture
+        const textureLoader = new THREE.TextureLoader();
+        textureLoader.load(
+            'textures/portal.png',
+            (texture) => {
+                this.portalTexture = texture;
+                this.createPortal();
+            },
+            undefined, // onProgress callback (not used)
+            (error) => {
+                // Error loading texture - create fallback
+                console.warn("Could not load portal texture. Creating fallback texture.", error);
+                this.createFallbackTexture();
+                this.createPortal();
+            }
+        );
     }
     
     createPortal() {
@@ -210,5 +221,81 @@ export class Portal {
     
     setScoreThreshold(score) {
         this.scoreThreshold = score;
+    }
+    
+    createPortalRingGlow() {
+        // Check if texture loading failed and use a fallback
+        if (!this.portalTexture) {
+            console.log("Portal texture not found, using fallback");
+            // Create a canvas texture as fallback
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            
+            // Draw a radial gradient as a fallback texture
+            const gradient = ctx.createRadialGradient(
+                canvas.width/2, canvas.height/2, 0,
+                canvas.width/2, canvas.height/2, canvas.width/2
+            );
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            gradient.addColorStop(0.3, 'rgba(160, 100, 255, 0.8)');
+            gradient.addColorStop(1, 'rgba(100, 0, 255, 0)');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Create texture from canvas
+            this.portalTexture = new THREE.CanvasTexture(canvas);
+        }
+        
+        // Rest of the method remains the same
+    }
+    
+    createFallbackTexture() {
+        // Create a canvas for the fallback texture
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+        
+        // Create a portal-like gradient
+        const gradient = ctx.createRadialGradient(
+            canvas.width / 2, canvas.height / 2, 0,
+            canvas.width / 2, canvas.height / 2, canvas.width / 2
+        );
+        
+        // Purple-ish portal colors
+        gradient.addColorStop(0, 'rgba(180, 100, 255, 1)');
+        gradient.addColorStop(0.5, 'rgba(120, 60, 200, 0.8)');
+        gradient.addColorStop(0.8, 'rgba(80, 20, 180, 0.4)');
+        gradient.addColorStop(1, 'rgba(40, 0, 100, 0)');
+        
+        // Fill with gradient
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Add some swirly lines for portal effect
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.lineWidth = 3;
+        
+        // Create spiral
+        ctx.beginPath();
+        for (let i = 0; i < 720; i += 10) {
+            const angle = i * Math.PI / 180;
+            const radius = i / 10;
+            const x = canvas.width / 2 + Math.cos(angle) * radius;
+            const y = canvas.height / 2 + Math.sin(angle) * radius;
+            
+            if (i === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        }
+        ctx.stroke();
+        
+        // Create THREE.js texture from canvas
+        this.portalTexture = new THREE.CanvasTexture(canvas);
     }
 } 

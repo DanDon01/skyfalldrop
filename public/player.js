@@ -28,11 +28,11 @@ export class Player {
         this.moveSpeed = 5; // Keyboard horizontal speed
         this.horizontalBoundary = 0;
         this.velocityY = 0; // Back to original (was -15)
-        this.gravity = -9.81 * 1.5; // Back to original (was -9.81 * 3)
+        this.gravity = -9.81 * 2.0; // Increased from -9.81 * 1.5
         this.targetY = 0;
         this.isVisuallyFalling = true;
         this.illusionScrollSpeed = 0;
-        this.baseFallSpeed = 7; // Back to original (was 10)
+        this.baseFallSpeed = 11;    // Increased from 7 to make background scroll faster
 
         // --- Vertical Movement Properties ---
         this.verticalMoveSpeed = 6; // Keyboard vertical speed
@@ -200,18 +200,14 @@ export class Player {
             // Just change color - no emissive for MeshBasicMaterial
             this.mesh.material.color.set(0xff0000); // Red flash
             
-            // Create a short flash sequence
-            gsap.to(this.mesh.material, {
-                duration: 0.1,
-                onComplete: () => {
-                    // Return to original color with easing
-                    gsap.to(this.mesh.material, {
-                        duration: 0.3,
-                        onComplete: () => {
-                            this.mesh.material.color.copy(originalColor);
-                        }
-                    });
-                }
+            // Immediately create a transition back to white
+            // This avoids the red color staying too long
+            gsap.to(this.mesh.material.color, {
+                r: 1,
+                g: 1,
+                b: 1,
+                duration: 0.15, // Very quick transition
+                ease: "power1.out"
             });
         }
     }

@@ -15,6 +15,10 @@ import { Portal } from './portal.js';
 import { WindEffect } from './windEffect.js';
 // Add import for the TrailEffect
 import { TrailEffect } from './trailEffect.js';
+// Add import for the SkyBackground
+import { SkyBackground } from './skyBackground.js';
+// Add import for AudioManager
+import { AudioManager } from './audioManager.js';
 
 // --- Global variables for Three.js components ---
 let scene;
@@ -31,6 +35,10 @@ const PORTAL_THRESHOLD = 10000; // Score needed to activate portal
 // Add to global variables
 let windEffect = null;
 let trailEffect = null;
+// Add to global variables
+let skyBackground = null;
+// Add to global variables
+let audioManager = null;
 // --- Export camera ---
 export { camera }; // <<< EXPORT the camera variable
 // --- Input State ---
@@ -244,6 +252,16 @@ function initGame() {
     // Create trail effect after player is set up
     trailEffect = new TrailEffect(scene, player);
 
+    // Create dynamic sky background after scene is set up
+    skyBackground = new SkyBackground(scene);
+
+    // Create audio manager
+    audioManager = new AudioManager();
+    audioManager.addListenerToCamera(camera);
+    
+    // Start wind sound for falling effect
+    audioManager.startWindSound();
+
     // Start the animation loop
     animate();
     console.log("Game initialized and animation loop started.");
@@ -417,6 +435,11 @@ function animate() {
         trailEffect.update(deltaTime);
     }
 
+    // Update sky background with current score
+    if (skyBackground) {
+        skyBackground.update(deltaTime);
+    }
+
     // Render the scene
     if (renderer && scene && camera) {
         renderer.render(scene, camera);
@@ -446,6 +469,11 @@ function handleCollision(event) {
     if (trailEffect) {
         trailEffect.createBurst(15, 2.0); // More particles and higher speed for collisions
     }
+
+    // Play collision sound
+    if (audioManager) {
+        audioManager.playCollisionSound();
+    }
 }
 
 // Add debug toggle for collision (useful for development)
@@ -470,6 +498,11 @@ function calculateScore(deltaTime, scrollSpeed) {
             lastScoreUpdate = Math.floor(currentScoreValue);
         }
     }
+
+    // Play score sound when score increases
+    if (audioManager && Math.floor(currentScoreValue) > lastScoreUpdate) {
+        audioManager.playScoreSound();
+    }
 }
 
 function handlePortalActivated(event) {
@@ -480,6 +513,11 @@ function handlePortalActivated(event) {
 function handlePortalEntered(event) {
     console.log("Entering portal to new destination!");
     // Any cleanup or final score submission could happen here
+
+    // Play portal sound
+    if (audioManager) {
+        audioManager.playPortalSound();
+    }
 }
 
 // Add this function to create and display the control hints

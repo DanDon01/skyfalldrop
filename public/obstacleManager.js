@@ -98,7 +98,6 @@ export class ObstacleManager {
             this.spawnTimer = 0;
             
             // Gradually decrease spawn interval for difficulty progression
-            // but don't go below a minimum threshold
             this.spawnInterval = Math.max(0.6, this.spawnInterval - 0.01);
         }
         
@@ -106,10 +105,14 @@ export class ObstacleManager {
         for (let i = this.obstacles.length - 1; i >= 0; i--) {
             const obstacle = this.obstacles[i];
             
-            // Calculate speed reduction factor (0.7 slows obstacles by 30%)
-            const speedReductionFactor = 0.7; 
+            // Skip update if obstacle or its mesh is null
+            if (!obstacle || !obstacle.mesh) {
+                console.warn("Skipping update for null obstacle or mesh");
+                continue;
+            }
             
             // Apply the reduced speed to obstacle movement
+            const speedReductionFactor = 0.7; 
             obstacle.update(deltaTime, scrollSpeed * speedReductionFactor);
             
             // --- Despawn Check ---
