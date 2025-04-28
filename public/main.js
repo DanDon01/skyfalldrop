@@ -19,6 +19,8 @@ import { TrailEffect } from './trailEffect.js';
 import { SkyBackground } from './skyBackground.js';
 // Add import for AudioManager
 import { AudioManager } from './audioManager.js';
+// Add import for SeasonalThemes
+import { SeasonalThemes } from './seasonalThemes.js';
 
 // --- Global variables for Three.js components ---
 let scene;
@@ -39,6 +41,8 @@ let trailEffect = null;
 let skyBackground = null;
 // Add to global variables
 let audioManager = null;
+// Add to global variables
+let seasonalThemes = null;
 // --- Export camera ---
 export { camera }; // <<< EXPORT the camera variable
 // --- Input State ---
@@ -276,6 +280,9 @@ function initGame() {
     window.addEventListener('click', initAudio);
     window.addEventListener('keydown', initAudio);
     window.addEventListener('touchstart', initAudio);
+
+    // Create seasonal themes manager
+    seasonalThemes = new SeasonalThemes(scene, background, skyBackground);
 }
 
 // --- Input Handling Functions ---
@@ -449,6 +456,11 @@ function animate() {
     // Update sky background with current score
     if (skyBackground) {
         skyBackground.update(deltaTime);
+    }
+
+    // Update seasonal themes
+    if (seasonalThemes) {
+        seasonalThemes.update(deltaTime);
     }
 
     // Render the scene

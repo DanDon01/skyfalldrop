@@ -25,66 +25,67 @@
 - [x] Implement texture scrolling based on player fall speed
 - [x] Add dynamic background color tinting overlay
 - [ ] Implement parallax scrolling effect
-- [ ] Add environmental elements (e.g., clouds, wind particles)
+- [x] Add environmental elements (e.g., clouds, wind particles)
 
 ## Obstacles
 - [x] Design obstacle types (e.g., static, moving, destructible)
 - [x] Create obstacle module (`public/obstacle.js`)
 - [x] Implement obstacle generation/spawning logic (`public/obstacleManager.js`)
 - [x] Add collision detection (Player vs. Obstacles)
-
-## Gameplay Mechanics
-- [x] Scoring system
-- [ ] Portal exit system (after reaching score threshold)
-- [ ] Difficulty progression (e.g., faster scrolling, more obstacles)
-- [ ] VibeShot snapshot mode
-
-## UI/UX
-- [x] Display score
-- [ ] Portal indicator
-- [ ] Touch control indicators (optional)
-- [ ] VibeShot button
+- [x] Add collision response (e.g., score penalty, knockback)
+- [x] Implement score/progress-based difficulty scaling
 
 ## Audio
-- [ ] Add background music
-- [ ] Add sound effects (collision, score, etc.)
+- [x] Create AudioManager module (`public/audioManager.js`)
+- [x] Load and manage sound effects
+- [x] Play sound on collisions
+- [x] Play background music
+- [x] Add wind/falling ambient sound
 
-## Portal Exit System
-- [ ] Create portal module (`public/portal.js`)
-- [ ] Implement portal appearance at score threshold
-- [ ] Add portal visual effects
-- [ ] Handle player entering portal
-- [ ] Implement transition to destination URL
+## Special Effects
+- [x] Create particle effects for collisions
+- [x] Implement trail behind player
+- [x] Add visual feedback for collisions (flash/shake)
+- [x] Create wind effect particles
+- [x] Implement day/night cycle with sky gradient
 
-## VibeShot Feature
-- [ ] Create snapshot module (`public/snapshot.js`) 
-- [ ] Implement slow-motion and camera adjustment
-- [ ] Add score overlay for screenshots
-- [ ] Include watermark with branding
-- [ ] Allow players to save/share screenshots
+## Portal System
+- [x] Create portal object
+- [x] Add portal activation at score threshold
+- [x] Implement player-portal interaction
+- [x] Add visual effects for portal
+- [x] Handle game completion/exit through portal
+
+## Snapshot Feature
+- [x] Create snapshot module (`public/snapshot.js`) 
+- [x] Implement slow-motion and camera adjustment
+- [x] Add score overlay for screenshots
+- [x] Include watermark with branding
+- [x] Allow players to save/share screenshots
 
 ## Refinement & Polish
-- [ ] Code cleanup and optimization
-- [ ] Cross-browser testing
-- [ ] Performance monitoring
-- [ ] Bug fixing
+- [x] Code cleanup and optimization
+- [x] Cross-browser testing
+- [x] Performance monitoring
+- [x] Bug fixing
 
 ## Advanced Features
-- [ ] Day/Night cycle based on play duration
-- [ ] Player trail effects
-- [ ] Dynamic weather layers
+- [x] Day/Night cycle based on play duration
+- [x] Player trail effects
+- [x] Dynamic weather layers
 - [ ] Seasonal themes
 
 ## Scoring & UI
-- [ ] Create ScoreManager (`src/score.js`)
-- [ ] Increment score based on time/distance
-- [ ] Display score on HTML UI (`src/ui.js`)
-- [ ] Add milestone indicators/sounds
-- [ ] Display game over message
+- [x] Create ScoreCounter (`public/scoreCounter.js`)
+- [x] Increment score based on time/distance
+- [x] Display score on HTML UI
+- [x] Add milestone indicators/sounds
+- [x] Display game over message
+- [x] Add "Let's Go!" animation at game start
 
 ## Game State & Flow
-- [ ] Manage game states (Loading, Playing, Game Over) (`src/gameState.js`)
-- [ ] Implement game start logic
+- [x] Manage game states (Loading, Playing, Game Over)
+- [x] Implement game start logic
 
 ## Build & Deployment
 - [ ] Setup build process (e.g., Vite, Webpack)

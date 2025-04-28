@@ -175,4 +175,19 @@ export class Background {
 
         console.log(`Background Resized & Texture Repeat Updated`);
     }
+
+    setBackgroundTint(color) {
+        console.log("Applying background tint:", color);
+        
+        // Create a new color material with the theme color
+        if (this.mesh && this.mesh.material) {
+            // Apply tint by blending with current texture
+            this.mesh.material.color = color;
+            this.mesh.material.needsUpdate = true;
+            
+            console.log("Background tint applied");
+        } else {
+            console.warn("Cannot apply tint - background mesh or material not available");
+        }
+    }
 } 

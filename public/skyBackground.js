@@ -87,4 +87,50 @@ export class SkyBackground {
             this.material.dispose();
         }
     }
+
+    setSkyColors(colorSet) {
+        console.log("Setting sky colors:", colorSet);
+        if (!colorSet || !Array.isArray(colorSet) || colorSet.length < 4) {
+            console.error("Invalid color set for sky background");
+            return;
+        }
+        
+        // Store the new colors
+        this.skyColors = colorSet;
+        
+        // Force update to the current time
+        this.elapsedTime = (this.elapsedTime % 24); // Keep current time of day
+        this.updateSkyColor();
+        
+        console.log("Sky colors updated");
+    }
+
+    updateSkyColor() {
+        // Calculate the time of day (0-24)
+        const timeOfDay = this.elapsedTime % 24;
+        
+        let colors;
+        // Morning (5-8)
+        if (timeOfDay >= 5 && timeOfDay < 8) {
+            colors = this.skyColors[0]; // Morning colors
+        }
+        // Day (8-18)
+        else if (timeOfDay >= 8 && timeOfDay < 18) {
+            colors = this.skyColors[1]; // Day colors
+        }
+        // Evening (18-21)
+        else if (timeOfDay >= 18 && timeOfDay < 21) {
+            colors = this.skyColors[2]; // Evening colors
+        }
+        // Night (21-5)
+        else {
+            colors = this.skyColors[3]; // Night colors
+        }
+        
+        if (this.material) {
+            this.material.uniforms.topColor.value.set(colors.top);
+            this.material.uniforms.bottomColor.value.set(colors.bottom);
+            this.material.needsUpdate = true;
+        }
+    }
 } 
