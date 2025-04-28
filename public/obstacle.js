@@ -11,12 +11,27 @@ export class Obstacle {
         this.horizontalRange = horizontalRange; // Max distance (+/-) to move horizontally from initial X
         this.initialX = initialPosition.x;      // Store the starting X to calculate range limits
         this.direction = Math.random() < 0.5 ? 1 : -1; // Initial horizontal direction (1 for right, -1 for left)
+        this.initialPosition = initialPosition.clone(); // Store for later use
+        this.loadAttempts = 0;
+        this.maxLoadAttempts = 2;
+        
+        // Add loading state flag
+        this.isLoading = true; // NEW: Track loading state
 
         // Add unique ID
         this.id = 'obstacle_' + Math.floor(Math.random() * 1000000);
 
-        // --- Load Texture ---
-        const obstacleTexture = textureLoader.load(
+        // Try loading the texture
+        this.loadTexture(texturePath, initialPosition);
+    }
+
+    // Separate method for texture loading with retry logic
+    loadTexture(texturePath, initialPosition) {
+        this.loadAttempts++;
+        console.log(`Loading obstacle texture (attempt ${this.loadAttempts}): ${texturePath}`);
+        
+        const textureLoader = new THREE.TextureLoader();
+        textureLoader.load(
             texturePath,
             (texture) => {
                 // Use texture aspect ratio for geometry if possible
@@ -36,14 +51,28 @@ export class Obstacle {
 
                 // Add to scene once mesh is ready
                 this.addToScene();
-                console.log(`Obstacle created with texture: ${texturePath}`);
+                console.log(`Obstacle created successfully with texture: ${texturePath}`);
+                
+                // Mark loading as complete
+                this.isLoading = false; // Set to false once loaded
             },
             undefined, // onProgress
             (error) => {
                 console.error(`Error loading obstacle texture: ${texturePath}`, error);
-                // Optional: Create a fallback placeholder if texture fails
-                this.createFallbackCube(initialPosition);
-                this.addToScene();
+                
+                // Retry loading a few times before creating fallback
+                if (this.loadAttempts < this.maxLoadAttempts) {
+                    console.log(`Retrying texture load for ${texturePath}...`);
+                    this.loadTexture(texturePath, initialPosition);
+                } else {
+                    // Create a fallback placeholder if texture fails after retries
+                    console.warn(`Creating fallback for ${texturePath} after ${this.loadAttempts} failed attempts`);
+                    this.createFallbackCube(initialPosition);
+                    this.addToScene();
+                    
+                    // Mark loading as complete even for fallback
+                    this.isLoading = false;
+                }
             }
         );
     }

@@ -40,10 +40,10 @@ export class ObstacleManager {
         this.scene = scene;
         this.camera = camera;
         this.obstacles = []; // Array to hold active obstacles
-        this.baseSpeed = 5; // Reduced from higher value to slow down obstacles
-        this.speedVariation = 1.5; // Adds some variety to obstacle speeds
+        this.baseSpeed = 4; // Reduced from 5 to 4 to slow down obstacles
+        this.speedVariation = 1.2; // Slightly reduced from 1.5
         this.spawnTimer = 0;
-        this.spawnInterval = 0.8; // Reduced from likely ~1.5 to increase frequency
+        this.spawnInterval = 1.0; // Increased from 0.8 to 1.0 to space out obstacles more
         this.baseSpawnY = -10;    // Initial Y position below the camera view
         this.despawnY = 15;     // Y position above camera view to remove obstacles
         this.horizontalSpawnPadding = 1.0; // Min distance from screen edge for spawning
@@ -81,47 +81,106 @@ export class ObstacleManager {
             initialPosition,
             type.speed,
             type.range
-            // We could pass baseHeight here if Obstacle constructor uses it
         );
+        
+        // Track total obstacles before and after adding
+        const beforeCount = this.obstacles.length;
         this.obstacles.push(newObstacle);
-
-        console.log(`Spawned ${type.texture} at X: ${spawnX.toFixed(2)}`);
+        
+        console.log(`Spawned ${type.texture} at X: ${spawnX.toFixed(2)}, Y: ${spawnY.toFixed(2)}`);
+        console.log(`Active obstacles: ${beforeCount} → ${this.obstacles.length}`);
     }
 
     update(deltaTime, scrollSpeed) {
         // Update spawn timer
         this.spawnTimer += deltaTime;
         
+        const shouldSpawn = this.spawnTimer >= this.spawnInterval;
+        
         // Spawn new obstacles at regular intervals
-        if (this.spawnTimer >= this.spawnInterval) {
+        if (shouldSpawn) {
+            console.log(`Spawning new obstacle (Timer: ${this.spawnTimer.toFixed(2)}, Interval: ${this.spawnInterval.toFixed(2)})`);
             this.spawnObstacle();
             this.spawnTimer = 0;
             
-            // Gradually decrease spawn interval for difficulty progression
             this.spawnInterval = Math.max(0.6, this.spawnInterval - 0.01);
         }
         
-        // Update existing obstacles
+        // First, remove any null obstacles
+        const beforeFilterCount = this.obstacles.length;
+        this.obstacles = this.obstacles.filter(obstacle => obstacle !== null && obstacle !== undefined);
+        const afterFilterCount = this.obstacles.length;
+        
+        if (beforeFilterCount !== afterFilterCount) {
+            console.log(`Removed ${beforeFilterCount - afterFilterCount} null obstacles`);
+        }
+        
+        // Log counts periodically
+        if (shouldSpawn) {
+            // Count loading vs. ready obstacles
+            const loadingCount = this.obstacles.filter(o => o.isLoading).length;
+            const readyCount = this.obstacles.length - loadingCount;
+            console.log(`Total obstacles: ${this.obstacles.length} (Loading: ${loadingCount}, Ready: ${readyCount})`);
+        }
+        
+        let updatedCount = 0;
+        let removedCount = 0;
+        
         for (let i = this.obstacles.length - 1; i >= 0; i--) {
-            const obstacle = this.obstacles[i];
-            
-            // Skip update if obstacle or its mesh is null
-            if (!obstacle || !obstacle.mesh) {
-                console.warn("Skipping update for null obstacle or mesh");
-                continue;
+            try {
+                const obstacle = this.obstacles[i];
+                
+                // Skip update for null obstacles or still-loading obstacles
+                if (!obstacle) {
+                    this.obstacles.splice(i, 1);
+                    removedCount++;
+                    continue;
+                }
+                
+                // CRITICAL CHANGE: Don't remove obstacles still loading
+                if (obstacle.isLoading) {
+                    // Skip update but keep the obstacle
+                    continue;
+                }
+                
+                // Now check if mesh is missing (should only happen for loaded obstacles)
+                if (!obstacle.mesh) {
+                    this.obstacles.splice(i, 1);
+                    removedCount++;
+                    continue;
+                }
+                
+                // Update the obstacle with slower speed
+                // Changed from 0.7 to 0.5 to make obstacles slower
+                const speedReductionFactor = 0.5; 
+                obstacle.update(deltaTime, scrollSpeed * speedReductionFactor);
+                updatedCount++;
+                
+                // Remove obstacles that have scrolled out of view
+                if (obstacle.mesh.position.y > this.despawnY) {
+                    obstacle.removeFromScene();
+                    this.obstacles.splice(i, 1);
+                    removedCount++;
+                }
+            } catch (error) {
+                console.error("Error updating obstacle:", error);
+                if (i >= 0 && i < this.obstacles.length) {
+                    try {
+                        const obstacle = this.obstacles[i];
+                        if (obstacle && obstacle.removeFromScene) {
+                            obstacle.removeFromScene();
+                        }
+                    } catch (e) {
+                        // Silently fail
+                    }
+                    this.obstacles.splice(i, 1);
+                    removedCount++;
+                }
             }
-            
-            // Apply the reduced speed to obstacle movement
-            const speedReductionFactor = 0.7; 
-            obstacle.update(deltaTime, scrollSpeed * speedReductionFactor);
-            
-            // --- Despawn Check ---
-            // Remove obstacles that have scrolled far enough above the screen
-            if (obstacle.mesh.position.y > this.despawnY) {
-                console.log(`Despawning obstacle at Y: ${obstacle.mesh.position.y.toFixed(2)}`);
-                obstacle.removeFromScene();
-                this.obstacles.splice(i, 1); // Remove from array
-            }
+        }
+        
+        if (shouldSpawn) {
+            console.log(`Updated ${updatedCount} obstacles, removed ${removedCount}`);
         }
     }
 

@@ -16,20 +16,26 @@ export class Portal {
         // Portal destination URL (can be updated)
         this.destinationUrl = "https://aitechnoking.com"; // Default destination
         
-        // Load the portal texture
+        // Use a fallback texture by default to avoid loading issues
+        this.createFallbackTexture();
+        this.createPortal();
+        
+        // Still try to load the texture, but don't wait for it
         const textureLoader = new THREE.TextureLoader();
         textureLoader.load(
             'textures/portal.png',
             (texture) => {
+                // If the texture loads successfully, update our materials
                 this.portalTexture = texture;
-                this.createPortal();
+                if (this.portalMesh && this.portalMesh.material) {
+                    this.portalMesh.material.map = texture;
+                    this.portalMesh.material.needsUpdate = true;
+                }
+                console.log("Portal texture loaded successfully");
             },
-            undefined, // onProgress callback (not used)
+            undefined,
             (error) => {
-                // Error loading texture - create fallback
-                console.warn("Could not load portal texture. Creating fallback texture.", error);
-                this.createFallbackTexture();
-                this.createPortal();
+                console.warn("Could not load portal texture, using fallback.", error);
             }
         );
     }

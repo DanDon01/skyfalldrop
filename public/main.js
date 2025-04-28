@@ -262,9 +262,20 @@ function initGame() {
     // Start wind sound for falling effect
     audioManager.startWindSound();
 
+    // Show control hints
+    showControlHints();
+    
+    // Add the Let's Go animation
+    showLetsGoAnimation();
+    
     // Start the animation loop
     animate();
     console.log("Game initialized and animation loop started.");
+
+    // Add audio initialization after user interaction
+    window.addEventListener('click', initAudio);
+    window.addEventListener('keydown', initAudio);
+    window.addEventListener('touchstart', initAudio);
 }
 
 // --- Input Handling Functions ---
@@ -562,4 +573,60 @@ function showControlHints() {
             }
         }, 1500); // Match transition duration
     }, 10000);
+}
+
+function initAudio() {
+    // Only needs to run once
+    if (audioManager && !audioManager.initialized) {
+        audioManager.initializeAudio();
+        // Remove event listeners once audio is initialized
+        window.removeEventListener('click', initAudio);
+        window.removeEventListener('keydown', initAudio);
+        window.removeEventListener('touchstart', initAudio);
+    }
+}
+
+// Add this function to create and animate the "LET'S GO!" text
+// Add it near the initGame function
+function showLetsGoAnimation() {
+    // Create the element
+    const letsGoText = document.createElement('div');
+    letsGoText.textContent = "LET'S GO!";
+    letsGoText.style.position = 'fixed';
+    letsGoText.style.top = '30%';
+    letsGoText.style.left = '0';
+    letsGoText.style.width = '100%';
+    letsGoText.style.textAlign = 'center';
+    letsGoText.style.color = 'white';
+    letsGoText.style.fontFamily = '"Arial Black", Gadget, sans-serif';
+    letsGoText.style.fontSize = '24px';
+    letsGoText.style.fontWeight = 'bold';
+    letsGoText.style.textShadow = '0 0 10px #00ffff, 0 0 20px #0000ff';
+    letsGoText.style.zIndex = '1000';
+    letsGoText.style.opacity = '0';
+    letsGoText.style.pointerEvents = 'none'; // Don't block interactions
+    document.body.appendChild(letsGoText);
+    
+    // Animate with GSAP
+    gsap.to(letsGoText, {
+        opacity: 1,
+        fontSize: "80px",
+        duration: 0.5,
+        ease: "power2.out",
+        onComplete: () => {
+            gsap.to(letsGoText, {
+                opacity: 0,
+                y: -100,
+                scale: 1.5,
+                duration: 0.7,
+                ease: "power2.in",
+                onComplete: () => {
+                    // Remove the element when animation is done
+                    if (letsGoText.parentNode) {
+                        document.body.removeChild(letsGoText);
+                    }
+                }
+            });
+        }
+    });
 } 
