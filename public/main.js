@@ -21,6 +21,8 @@ import { SkyBackground } from './skyBackground.js';
 import { AudioManager } from './audioManager.js';
 // Add import for SeasonalThemes
 import { SeasonalThemes } from './seasonalThemes.js';
+// Add import for LeafParticles
+import { LeafParticles } from './leafParticles.js';
 
 // --- Global variables for Three.js components ---
 let scene;
@@ -43,6 +45,8 @@ let skyBackground = null;
 let audioManager = null;
 // Add to global variables
 let seasonalThemes = null;
+// Add to global variables
+let leafParticles = null;
 // --- Export camera ---
 export { camera }; // <<< EXPORT the camera variable
 // --- Input State ---
@@ -272,6 +276,12 @@ function initGame() {
     // Add the Let's Go animation
     showLetsGoAnimation();
     
+    // Create leaf particles system
+    leafParticles = new LeafParticles(scene);
+    
+    // Create seasonal themes manager, now with leafParticles
+    seasonalThemes = new SeasonalThemes(scene, background, skyBackground, leafParticles);
+    
     // Start the animation loop
     animate();
     console.log("Game initialized and animation loop started.");
@@ -280,9 +290,6 @@ function initGame() {
     window.addEventListener('click', initAudio);
     window.addEventListener('keydown', initAudio);
     window.addEventListener('touchstart', initAudio);
-
-    // Create seasonal themes manager
-    seasonalThemes = new SeasonalThemes(scene, background, skyBackground);
 }
 
 // --- Input Handling Functions ---
@@ -461,6 +468,11 @@ function animate() {
     // Update seasonal themes
     if (seasonalThemes) {
         seasonalThemes.update(deltaTime);
+    }
+
+    // Update leaf particles
+    if (leafParticles) {
+        leafParticles.update(deltaTime);
     }
 
     // Render the scene

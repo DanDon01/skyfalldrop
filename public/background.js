@@ -190,4 +190,57 @@ export class Background {
             console.warn("Cannot apply tint - background mesh or material not available");
         }
     }
+
+    // Update the setTexture method to properly handle texture wrapping and repeat
+    setTexture(texture) {
+        console.log("Setting new background texture");
+        
+        if (this.mesh && this.mesh.material) {
+            // Store old settings
+            const oldColor = this.mesh.material.color.clone();
+            const oldTransparent = this.mesh.material.transparent;
+            const oldOpacity = this.mesh.material.opacity;
+            
+            // Configure new texture with proper repeat settings (crucial for tiling)
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            
+            // Get current repeat settings from existing texture if available
+            if (this.mesh.material.map) {
+                texture.repeat.copy(this.mesh.material.map.repeat);
+            } else {
+                // Default repeat settings based on the camera's aspect ratio
+                this.updateTextureRepeat(texture);
+            }
+            
+            // Apply new texture
+            this.mesh.material.map = texture;
+            
+            // Re-apply original settings
+            this.mesh.material.color = oldColor;
+            this.mesh.material.transparent = oldTransparent;
+            this.mesh.material.opacity = oldOpacity;
+            
+            // Make sure everything updates
+            this.mesh.material.needsUpdate = true;
+            texture.needsUpdate = true;
+            
+            console.log("Background texture updated successfully with tiling");
+        } else {
+            console.warn("Cannot set texture - background mesh or material not available");
+        }
+    }
+
+    // Helper method to update texture repeat based on camera
+    updateTextureRepeat(texture) {
+        if (!texture) return;
+        
+        const aspectRatio = window.innerWidth / window.innerHeight;
+        const textureHeight = 2;
+        const textureWidth = textureHeight * aspectRatio;
+        
+        // Apply calculated repeat values
+        texture.repeat.set(textureWidth, textureHeight);
+        console.log(`Set texture repeat to ${textureWidth.toFixed(2)} x ${textureHeight}`);
+    }
 } 

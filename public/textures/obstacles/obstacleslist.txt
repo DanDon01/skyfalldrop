@@ -1,0 +1,15 @@
+angel
+bee
+bird_crow
+butterfly
+dart
+egg
+flamingo
+football
+iss
+balloon
+plane_paper
+rocket
+sattelite
+ufo
+

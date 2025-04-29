@@ -1,59 +1,177 @@
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 import { Obstacle } from './obstacle.js';
 
-// Define the types of obstacles available
-const OBSTACLE_TYPES = [
-    {
-        texture: 'textures/angel.png',
-        speed: 1.5, // Horizontal speed
-        range: 2.0, // Horizontal movement range (+/- from start X)
-        baseHeight: 1.2 // Optional: Adjust base size if needed
-    },
-    {
-        texture: 'textures/bird_crow.png',
-        speed: 2.5,
-        range: 3.0,
-        baseHeight: 0.8
-    },
-    {
-        texture: 'textures/flamingo.png',
-        speed: 1.0,
-        range: 1.5,
-        baseHeight: 1.5
-    },
-    {
-        texture: 'textures/plane_balloon.png',
-        speed: 0.8,
-        range: 4.0,
-        baseHeight: 1.8
-    },
-    {
-        texture: 'textures/plane_paper.png', // Corrected typo: paper
-        speed: 3.0,
-        range: 2.5,
-        baseHeight: 0.7
-    }
-];
-
 export class ObstacleManager {
     constructor(scene, camera) {
         this.scene = scene;
         this.camera = camera;
         this.obstacles = []; // Array to hold active obstacles
-        this.baseSpeed = 4; // Reduced from 5 to 4 to slow down obstacles
-        this.speedVariation = 1.2; // Slightly reduced from 1.5
+        this.baseSpeed = 4; // Base speed
+        this.speedVariation = 1.2; // Speed variation
         this.spawnTimer = 0;
-        this.spawnInterval = 1.0; // Increased from 0.8 to 1.0 to space out obstacles more
-        this.baseSpawnY = -10;    // Initial Y position below the camera view
-        this.despawnY = 15;     // Y position above camera view to remove obstacles
-        this.horizontalSpawnPadding = 1.0; // Min distance from screen edge for spawning
+        this.spawnInterval = 1.0;
+        this.baseSpawnY = -10;
+        this.despawnY = 15;
+        this.horizontalSpawnPadding = 1.0;
+        
+        // Create a texture loader
+        this.textureLoader = new THREE.TextureLoader();
+        
+        // Array to store discovered textures
+        this.availableTextures = [];
+        
+        // Update path to the obstacles folder
+        this.texturesPath = 'textures/obstacles/';
+        
+        // Initialize by loading textures
+        this.loadAvailableTextures();
+    }
+    
+    loadAvailableTextures() {
+        console.log("Reading obstacle list from obstacles folder...");
+        
+        // Clear any existing textures to avoid duplicates
+        this.availableTextures = [];
+        
+        // Log the exact path we're trying to fetch
+        const listFilePath = `${this.texturesPath}obstacleslist.txt`;
+        console.log(`Attempting to fetch obstacle list from: ${listFilePath}`);
+        
+        // First load the list file
+        fetch(listFilePath)
+            .then(response => {
+                console.log(`Fetch response status: ${response.status} ${response.statusText}`);
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to load obstacle list: ${response.status} ${response.statusText}`);
+                }
+                return response.text();
+            })
+            .then(text => {
+                console.log(`Successfully loaded list file, content length: ${text.length} characters`);
+                
+                // Parse the list - assuming one filename per line
+                const filenames = text.split('\n')
+                    .map(line => line.trim())
+                    .filter(line => line.length > 0); // Remove empty lines
+                
+                console.log(`Found ${filenames.length} obstacles in list file: ${filenames.join(', ')}`);
+                
+                if (filenames.length === 0) {
+                    throw new Error("Obstacle list file was empty");
+                }
+                
+                // Load each texture in the list
+                filenames.forEach(filename => {
+                    // Add .png extension if not already present
+                    if (!filename.toLowerCase().endsWith('.png')) {
+                        filename += '.png';
+                    }
+                    
+                    const texturePath = `${this.texturesPath}${filename}`;
+                    console.log(`Loading texture: ${texturePath}`);
+                    
+                    // Load the texture
+                    this.textureLoader.load(
+                        texturePath,
+                        // Success handler
+                        (texture) => {
+                            // Generate random stats for this texture
+                            const textureConfig = {
+                                path: texturePath,
+                                speed: 0.5 + Math.random() * 3.0,
+                                range: 1.0 + Math.random() * 3.0,
+                                baseHeight: 0.7 + Math.random() * 1.1
+                            };
+                            
+                            // Add to available textures
+                            this.availableTextures.push(textureConfig);
+                            console.log(`✅ Successfully loaded obstacle texture: ${texturePath} (Total: ${this.availableTextures.length})`);
+                        },
+                        // Progress handler (not needed)
+                        undefined,
+                        // Error handler
+                        (error) => {
+                            console.error(`❌ Failed to load texture ${texturePath}:`, error);
+                        }
+                    );
+                });
+            })
+            .catch(error => {
+                console.error("❌ Error loading obstacle list:", error);
+                console.log("Check that textures/obstacles/obstacleslist.txt exists and is accessible");
+                console.warn("Falling back to sequential number loading...");
+                
+                // Fall back to sequential loading as a backup
+                this.loadSequentialTextures();
+            });
+    }
+
+    // Fallback method to load textures sequentially if the list file is not found
+    loadSequentialTextures() {
+        console.log("Attempting to load sequentially numbered textures as fallback...");
+        
+        let consecutiveFailures = 0;
+        let textureCount = 1;
+        let maxTextures = 100; // Safety limit to prevent infinite attempts
+        
+        const tryNextTexture = () => {
+            // Stop if we've had too many failures or reached the max limit
+            if (consecutiveFailures >= 3 || textureCount > maxTextures) {
+                console.log(`Finished loading obstacle textures. Found ${this.availableTextures.length} textures.`);
+                return;
+            }
+            
+            // Construct the texture path - using sequential numbering
+            const texturePath = `${this.texturesPath}${textureCount}.png`;
+            
+            // Load the texture
+            this.textureLoader.load(
+                texturePath,
+                // Success handler
+                (texture) => {
+                    // Generate random stats for this texture
+                    const textureConfig = {
+                        path: texturePath,
+                        speed: 0.5 + Math.random() * 3.0,
+                        range: 1.0 + Math.random() * 3.0,
+                        baseHeight: 0.7 + Math.random() * 1.1
+                    };
+                    
+                    // Add to available textures
+                    this.availableTextures.push(textureConfig);
+                    console.log(`Loaded obstacle texture: ${texturePath} (Total: ${this.availableTextures.length})`);
+                    
+                    // Reset failure counter since we had a success
+                    consecutiveFailures = 0;
+                    
+                    // Try the next texture
+                    textureCount++;
+                    tryNextTexture();
+                },
+                // Progress handler (not needed)
+                undefined,
+                // Error handler
+                () => {
+                    // Count consecutive failures
+                    consecutiveFailures++;
+                    
+                    console.log(`Texture ${texturePath} not found. Consecutive failures: ${consecutiveFailures}`);
+                    
+                    // Move to next texture
+                    textureCount++;
+                    tryNextTexture();
+                }
+            );
+        };
+        
+        // Start the sequential loading process
+        tryNextTexture();
     }
 
     // Calculate the horizontal boundaries for spawning
     getSpawnBounds() {
         const vFOV = THREE.MathUtils.degToRad(this.camera.fov);
-        // Calculate visible height/width at Z=0 (where obstacles might be)
-        // Note: This assumes obstacles are roughly at Z=0 relative to camera focus
         const height = 2 * Math.tan(vFOV / 2) * this.camera.position.z;
         const width = height * this.camera.aspect;
         const minX = (-width / 2) + this.horizontalSpawnPadding;
@@ -62,43 +180,57 @@ export class ObstacleManager {
     }
 
     spawnObstacle() {
-        // 1. Choose a random obstacle type
-        const typeIndex = Math.floor(Math.random() * OBSTACLE_TYPES.length);
-        const type = OBSTACLE_TYPES[typeIndex];
-
-        // 2. Determine spawn position
+        // Check if we have any textures loaded
+        if (this.availableTextures.length === 0) {
+            console.warn("No obstacle textures available. Skipping spawn.");
+            return;
+        }
+        
+        // Select a random texture configuration
+        const textureConfig = this.availableTextures[
+            Math.floor(Math.random() * this.availableTextures.length)
+        ];
+        
+        // Determine spawn position
         const bounds = this.getSpawnBounds();
         const spawnX = THREE.MathUtils.randFloat(bounds.minX, bounds.maxX);
-        // Spawn below the camera view, slightly randomized Y
         const spawnY = this.baseSpawnY - Math.random() * 5;
-        const spawnZ = 0; // Spawn obstacles at Z=0 plane
+        const spawnZ = 0;
         const initialPosition = new THREE.Vector3(spawnX, spawnY, spawnZ);
 
-        // 3. Create and add the obstacle
+        // Create and add the obstacle
         const newObstacle = new Obstacle(
             this.scene,
-            type.texture,
+            textureConfig.path,
             initialPosition,
-            type.speed,
-            type.range
+            textureConfig.speed,
+            textureConfig.range
         );
         
         // Track total obstacles before and after adding
         const beforeCount = this.obstacles.length;
         this.obstacles.push(newObstacle);
         
-        console.log(`Spawned ${type.texture} at X: ${spawnX.toFixed(2)}, Y: ${spawnY.toFixed(2)}`);
+        console.log(`Spawned ${textureConfig.path} at X: ${spawnX.toFixed(2)}, Y: ${spawnY.toFixed(2)}`);
         console.log(`Active obstacles: ${beforeCount} → ${this.obstacles.length}`);
     }
 
     update(deltaTime, scrollSpeed) {
+        // First check if we have textures available yet
+        if (this.availableTextures.length === 0 && this.spawnTimer > 3) {
+            console.warn("Still no textures available after 3 seconds. Retrying scan...");
+            this.loadAvailableTextures();
+            this.spawnTimer = 0;
+            return;
+        }
+        
         // Update spawn timer
         this.spawnTimer += deltaTime;
         
         const shouldSpawn = this.spawnTimer >= this.spawnInterval;
         
         // Spawn new obstacles at regular intervals
-        if (shouldSpawn) {
+        if (shouldSpawn && this.availableTextures.length > 0) {
             console.log(`Spawning new obstacle (Timer: ${this.spawnTimer.toFixed(2)}, Interval: ${this.spawnInterval.toFixed(2)})`);
             this.spawnObstacle();
             this.spawnTimer = 0;
@@ -115,14 +247,6 @@ export class ObstacleManager {
             console.log(`Removed ${beforeFilterCount - afterFilterCount} null obstacles`);
         }
         
-        // Log counts periodically
-        if (shouldSpawn) {
-            // Count loading vs. ready obstacles
-            const loadingCount = this.obstacles.filter(o => o.isLoading).length;
-            const readyCount = this.obstacles.length - loadingCount;
-            console.log(`Total obstacles: ${this.obstacles.length} (Loading: ${loadingCount}, Ready: ${readyCount})`);
-        }
-        
         let updatedCount = 0;
         let removedCount = 0;
         
@@ -137,26 +261,20 @@ export class ObstacleManager {
                     continue;
                 }
                 
-                // CRITICAL CHANGE: Don't remove obstacles still loading
                 if (obstacle.isLoading) {
-                    // Skip update but keep the obstacle
                     continue;
                 }
                 
-                // Now check if mesh is missing (should only happen for loaded obstacles)
                 if (!obstacle.mesh) {
                     this.obstacles.splice(i, 1);
                     removedCount++;
                     continue;
                 }
                 
-                // Update the obstacle with slower speed
-                // Changed from 0.7 to 0.5 to make obstacles slower
                 const speedReductionFactor = 0.5; 
                 obstacle.update(deltaTime, scrollSpeed * speedReductionFactor);
                 updatedCount++;
                 
-                // Remove obstacles that have scrolled out of view
                 if (obstacle.mesh.position.y > this.despawnY) {
                     obstacle.removeFromScene();
                     this.obstacles.splice(i, 1);
@@ -184,24 +302,30 @@ export class ObstacleManager {
         }
     }
 
-    // Method for collision detection - return truly active obstacles with proper Z check
+    // Method for collision detection
     getActiveObstacles() {
-        // Return obstacles that are currently in the scene and have a mesh
         return this.obstacles.filter(obstacle => {
             if (!obstacle.mesh) return false;
-            
-            // Only include obstacles that are in view range and can interact with player
-            // Check both that they're on screen and not too far back in Z
             return obstacle.mesh.position.y > this.baseSpawnY && 
                    obstacle.mesh.position.y < this.despawnY;
         });
     }
 
-    // Method to clear all obstacles (e.g., on game reset)
+    // Method to clear all obstacles
     clearAllObstacles() {
         console.log("Clearing all obstacles...");
-        this.obstacles.forEach(obstacle => obstacle.removeFromScene());
+        this.obstacles.forEach(obstacle => {
+            if (obstacle && obstacle.removeFromScene) {
+                obstacle.removeFromScene();
+            }
+        });
         this.obstacles = [];
-        this.spawnTimer = 0; // Reset spawn timer as well
+        this.spawnTimer = 0;
+    }
+    
+    // Scan for new textures (can be called from outside to refresh the texture list)
+    refreshTextures() {
+        console.log("Refreshing obstacle textures...");
+        this.loadAvailableTextures();
     }
 } 
