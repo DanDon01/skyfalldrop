@@ -11,33 +11,27 @@ export class Portal {
         this.ringMesh = null;
         this.glowMesh = null;
         this.portalRadius = 0.8;
-        this.portalY = -2.8;
+        this.portalY = -4.5;
         
         // Portal destination URL (can be updated)
         this.destinationUrl = "https://aitechnoking.com"; // Default destination
         
-        // Use a fallback texture by default to avoid loading issues
-        this.createFallbackTexture();
-        this.createPortal();
-        
-        // Still try to load the texture, but don't wait for it
+        // Use the correct path for the portal texture
         const textureLoader = new THREE.TextureLoader();
-        textureLoader.load(
-            'textures/portal.png',
-            (texture) => {
-                // If the texture loads successfully, update our materials
-                this.portalTexture = texture;
-                if (this.portalMesh && this.portalMesh.material) {
-                    this.portalMesh.material.map = texture;
-                    this.portalMesh.material.needsUpdate = true;
-                }
-                console.log("Portal texture loaded successfully");
-            },
+        const portalTexture = textureLoader.load('textures/portal.png', 
+            // Success callback
+            () => console.log("Portal texture loaded successfully"),
+            // Progress callback
             undefined,
-            (error) => {
-                console.warn("Could not load portal texture, using fallback.", error);
+            // Error callback
+            (err) => {
+                console.error("Failed to load portal texture:", err);
+                // Create a fallback texture
+                this.createFallbackTexture();
             }
         );
+        
+        this.createPortal();
     }
     
     createPortal() {
@@ -259,49 +253,30 @@ export class Portal {
     }
     
     createFallbackTexture() {
-        // Create a canvas for the fallback texture
+        console.log("Creating fallback portal texture");
+        
+        // Create a canvas element
         const canvas = document.createElement('canvas');
-        canvas.width = 512;
-        canvas.height = 512;
+        canvas.width = 256;
+        canvas.height = 256;
         const ctx = canvas.getContext('2d');
         
-        // Create a portal-like gradient
-        const gradient = ctx.createRadialGradient(
-            canvas.width / 2, canvas.height / 2, 0,
-            canvas.width / 2, canvas.height / 2, canvas.width / 2
-        );
+        // Draw a simple portal
+        const gradient = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
+        gradient.addColorStop(0, 'rgba(0, 200, 255, 1)');
+        gradient.addColorStop(0.5, 'rgba(100, 100, 255, 0.8)');
+        gradient.addColorStop(1, 'rgba(50, 50, 200, 0)');
         
-        // Purple-ish portal colors
-        gradient.addColorStop(0, 'rgba(180, 100, 255, 1)');
-        gradient.addColorStop(0.5, 'rgba(120, 60, 200, 0.8)');
-        gradient.addColorStop(0.8, 'rgba(80, 20, 180, 0.4)');
-        gradient.addColorStop(1, 'rgba(40, 0, 100, 0)');
-        
-        // Fill with gradient
         ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillRect(0, 0, 256, 256);
         
-        // Add some swirly lines for portal effect
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
-        ctx.lineWidth = 3;
+        // Create a texture from the canvas
+        const texture = new THREE.CanvasTexture(canvas);
         
-        // Create spiral
-        ctx.beginPath();
-        for (let i = 0; i < 720; i += 10) {
-            const angle = i * Math.PI / 180;
-            const radius = i / 10;
-            const x = canvas.width / 2 + Math.cos(angle) * radius;
-            const y = canvas.height / 2 + Math.sin(angle) * radius;
-            
-            if (i === 0) {
-                ctx.moveTo(x, y);
-            } else {
-                ctx.lineTo(x, y);
-            }
+        // Use this texture for the portal
+        if (this.portalMesh && this.portalMesh.material) {
+            this.portalMesh.material.map = texture;
+            this.portalMesh.material.needsUpdate = true;
         }
-        ctx.stroke();
-        
-        // Create THREE.js texture from canvas
-        this.portalTexture = new THREE.CanvasTexture(canvas);
     }
 } 

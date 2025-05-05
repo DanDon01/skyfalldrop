@@ -21,9 +21,14 @@ export class Background {
     constructor(scene, camera, scrollSpeedFactor = 2.0) { // Pass camera to calculate size and increase scroll speed factor
         console.log("Creating Background...");
         this.scene = scene;
+        this.camera = camera;
         this.mesh = null;
         this.scrollSpeedFactor = scrollSpeedFactor; // Doubled scrolling speed
 
+        // Make background partially transparent or smaller to allow skybox to be seen
+        this.backgroundOpacity = 0.0; // Make it fully transparent
+        this.backgroundSize = 0.8; // Make it smaller (80% of original size)
+        
         // --- Calculate size needed to fill viewport ---
         // We need the camera's FOV and distance to the plane
         const planeZ = -5; // Keep the plane behind the player
@@ -79,7 +84,9 @@ export class Background {
             // Start with white base color, texture map will be applied
             color: this.currentColor.clone(), // Material color will act as a tint
             map: backgroundTexture,
-            side: THREE.FrontSide
+            side: THREE.FrontSide,
+            transparent: true,
+            opacity: this.backgroundOpacity // Use opacity setting
         });
         this.mesh = new THREE.Mesh(geometry, material);
 

@@ -23,6 +23,8 @@ import { AudioManager } from './audioManager.js';
 import { SeasonalThemes } from './seasonalThemes.js';
 // Add import for LeafParticles
 import { LeafParticles } from './leafParticles.js';
+// Import the camera controller
+import { CameraController } from './cameraController.js';
 
 // --- Global variables for Three.js components ---
 let scene;
@@ -35,7 +37,11 @@ let obstacleManager = null; // <<< ADD GLOBAL
 let scoreCounter = null; // <<< ADD
 let currentScoreValue = 0; // <<< ADD: Store the raw score value
 let portal = null; // Add to global variables
-const PORTAL_THRESHOLD = 10000; // Score needed to activate portal
+const PORTAL_THRESHOLD = 100000; // Score needed to activate portal
+// Variables to track score milestones
+let lastMilestone500 = 0;
+let lastMilestone1000 = 0;
+let lastScoreUpdate = 0; // Add this if it's not already defined
 // Add to global variables
 let windEffect = null;
 let trailEffect = null;
@@ -47,8 +53,10 @@ let audioManager = null;
 let seasonalThemes = null;
 // Add to global variables
 let leafParticles = null;
+// Add a global variable for the camera controller
+let cameraController = null;
 // --- Export camera ---
-export { camera }; // <<< EXPORT the camera variable
+export { camera, audioManager }; // Export both camera and audioManager
 // --- Input State ---
 const keyboardState = {
     ArrowLeft: false,
@@ -99,19 +107,37 @@ window.gameState = {
     reducingScore: false,
     
     reduceScore: function(amount) {
-        // Make sure we don't go below zero
+        // Reduce the current score
         currentScoreValue = Math.max(0, currentScoreValue - amount);
         
-        // Update score display
-        if (scoreCounter) {
-            // Flash score counter red
-            this.flashScoreCounter();
-            // Update displayed score
-            scoreCounter.setScore(Math.floor(currentScoreValue));
-            lastScoreUpdate = Math.floor(currentScoreValue);
+        // Flash the score red to indicate reduction
+        const scoreValue = document.getElementById('ui-score-value');
+        if (scoreValue) {
+            // Store original values
+            const originalColor = '#ffcc00'; // Gold color
+            const originalShadow = '0 0 10px rgba(255, 204, 0, 0.6), ' + 
+                                  '0 0 20px rgba(255, 204, 0, 0.4), ' +
+                                  '0 2px 5px rgba(0, 0, 0, 0.9)';
+            
+            // Set to red immediately
+            scoreValue.style.color = '#ff3333';
+            scoreValue.style.textShadow = 
+                '0 0 10px rgba(255, 51, 51, 0.8), ' + 
+                '0 0 20px rgba(255, 51, 51, 0.6), ' +
+                '0 2px 5px rgba(0, 0, 0, 0.9)';
+            
+            // Use GSAP to animate back to gold after exactly 1 second
+            gsap.timeline()
+                .to(scoreValue, { duration: 1 }) // Wait 1 second
+                .to(scoreValue, {
+                    duration: 0.3, // Quick transition back
+                    onStart: function() {
+                        // Set back to original values
+                        scoreValue.style.color = originalColor;
+                        scoreValue.style.textShadow = originalShadow;
+                    }
+                });
         }
-        
-        console.log(`Score reduced by ${amount}. New score: ${currentScoreValue}`);
     },
     
     flashScoreCounter: function() {
@@ -160,12 +186,79 @@ window.gameState = {
     }
 };
 
+function setupSkybox(scene) {
+    console.log("Setting up skybox...");
+    
+    // Load skybox textures
+    const loader = new THREE.CubeTextureLoader();
+    
+    // Set the path to the skybox textures with explicit path
+    const basePath = window.location.origin + '/textures/skybox/';
+    console.log("Loading skybox textures from:", basePath);
+    
+    // Define the file paths explicitly
+    const textureURLs = [
+        basePath + 'px.jpg', // positive x
+        basePath + 'nx.jpg', // negative x
+        basePath + 'py.jpg', // positive y
+        basePath + 'ny.jpg', // negative y
+        basePath + 'pz.jpg', // positive z
+        basePath + 'nz.jpg'  // negative z
+    ];
+    
+    // Log all texture URLs to verify
+    console.log("Skybox texture URLs:", textureURLs);
+    
+    // Add loading callback to check if images are loaded properly
+    const onLoad = () => {
+        console.log("✅ Skybox textures loaded successfully");
+        
+        // Force the background to be visible by setting renderer clear color
+        if (renderer) {
+            renderer.setClearColor(0x000000, 0); // Set to transparent
+        }
+    };
+    
+    const onError = (err) => {
+        console.error("❌ Error loading skybox textures:", err);
+    };
+    
+    // Load the 6 sides of the cube
+    try {
+        const skyboxTexture = loader.load(textureURLs, onLoad, undefined, onError);
+        
+        // Set the scene background to the loaded skybox
+        scene.background = skyboxTexture;
+        console.log("Skybox texture assigned to scene.background");
+        
+        // Store the skybox texture in a global variable for later reference
+        window.skyboxTexture = skyboxTexture;
+        
+        console.log("Skybox setup initiated");
+        
+        // Add a debug check to verify skybox is still the background after 1 second
+        setTimeout(() => {
+            if (scene.background === skyboxTexture) {
+                console.log("✅ Skybox is still the scene background after 1 second");
+            } else {
+                console.error("❌ Skybox was replaced as scene background!");
+                // Force it back
+                scene.background = skyboxTexture;
+            }
+        }, 1000);
+        
+    } catch (error) {
+        console.error("Failed to set up skybox:", error);
+    }
+}
+
 function initGame() {
     console.log("Initializing game...");
 
     // 1. Scene
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x112233); // Keep scene background
+    // Setup skybox early in the initialization process
+    setupSkybox(scene);
 
     // 2. Camera
     const fov = 75; // Field of view
@@ -173,12 +266,17 @@ function initGame() {
     const near = 0.1; // Near clipping plane
     const far = 1000; // Far clipping plane
     camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-    camera.position.set(0, 1, 5); // Adjusted camera slightly
+    camera.position.set(0, 1, 5); // Adjust as needed
+    camera.lookAt(0, 0, 0); // Make sure camera is looking at the center
 
     // 3. Renderer
-    renderer = new THREE.WebGLRenderer({ antialias: true }); // antialias for smoother edges
+    renderer = new THREE.WebGLRenderer({ 
+        antialias: true,
+        alpha: true // Enable alpha channel in the renderer
+    });
     renderer.setSize(window.innerWidth, window.innerHeight); // Set size to full window
     renderer.setPixelRatio(window.devicePixelRatio); // Adjust for high-DPI screens
+    renderer.setClearColor(0x000000, 0); // Set clear color to transparent
     document.body.appendChild(renderer.domElement); // Add the canvas to the HTML body
     console.log("Scene, Camera, and Renderer initialized.");
 
@@ -198,10 +296,6 @@ function initGame() {
     scene.add(directionalLight);
     // --- End Lighting ---
 
-    // --- Create Background Instance ---
-    background = new Background(scene, camera);
-    // --- End Background Instance ---
-
     // --- Create Player Instance ---
     player = new Player(scene);
     // --- End Player Instance ---
@@ -217,7 +311,7 @@ function initGame() {
     // console.log("Initial Score Position Calculated:", scorePosition.x.toFixed(2), scorePosition.y.toFixed(2), scorePosition.z.toFixed(2));
 
     // Set a fixed world position (adjust Y as needed)
-    const scorePosition = new THREE.Vector3(0, 4.6, 0); // <<< ADJUST Y VALUE (e.g., 4.6 or 4.5)
+    const scorePosition = new THREE.Vector3(0, 3.0, 0); // Lowered from 4.6 to 3.0
     console.log("Using FIXED Score Position:", scorePosition.x.toFixed(2), scorePosition.y.toFixed(2), scorePosition.z.toFixed(2));
 
     scoreCounter = new ScoreCounter(scene, 0, scorePosition);
@@ -261,7 +355,7 @@ function initGame() {
     trailEffect = new TrailEffect(scene, player);
 
     // Create dynamic sky background after scene is set up
-    skyBackground = new SkyBackground(scene);
+    // skyBackground = new SkyBackground(scene);
 
     // Create audio manager
     audioManager = new AudioManager();
@@ -280,7 +374,13 @@ function initGame() {
     leafParticles = new LeafParticles(scene);
     
     // Create seasonal themes manager, now with leafParticles
-    seasonalThemes = new SeasonalThemes(scene, background, skyBackground, leafParticles);
+    seasonalThemes = new SeasonalThemes(scene, null, skyBackground, leafParticles);
+    
+    // Create camera controller with scene
+    cameraController = new CameraController(camera, player);
+    
+    // Create fixed UI score display
+    const uiScoreElement = createFixedUIScore();
     
     // Start the animation loop
     animate();
@@ -390,8 +490,6 @@ function onWindowResize() {
 }
 
 // --- Animation Loop ---
-let lastScoreUpdate = 0; // Store the last score passed to the counter
-
 function animate() {
     requestAnimationFrame(animate);
     const deltaTime = 0.016; // Using fixed delta for now
@@ -399,8 +497,8 @@ function animate() {
     // --- Game logic updates ---
     let currentScrollSpeed = 0; // Default scroll speed is 0
     if (player) {
-        player.update(deltaTime, keyboardState, touchState); // Pass both states separately
-        currentScrollSpeed = player.getScrollSpeed(); // Get speed AFTER player update
+        player.update(deltaTime, keyboardState, touchState);
+        currentScrollSpeed = player.getScrollSpeed();
     }
 
     // Get player's base scroll speed
@@ -411,11 +509,18 @@ function animate() {
     const effectiveScrollSpeed = playerScrollSpeed * scrollSpeedMultiplier;
     
     // Update obstacles and background with the enhanced speed
-    obstacleManager.update(deltaTime, effectiveScrollSpeed);
-    background.update(deltaTime, effectiveScrollSpeed);
+    if (obstacleManager) {
+        obstacleManager.update(deltaTime, effectiveScrollSpeed);
+    }
+    
+    // Only update background if it exists
+    if (background) {
+        background.update(deltaTime, effectiveScrollSpeed);
+    }
 
     // --- Calculate Score --- <<< RE-ADD CALCULATION
     calculateScore(deltaTime, effectiveScrollSpeed);
+    checkScoreMilestones(currentScoreValue);
     // --- End Calculate Score ---
 
     // --- Update 3D Score Display --- <<< ADD
@@ -475,6 +580,22 @@ function animate() {
         leafParticles.update(deltaTime);
     }
 
+    // Update camera position
+    if (cameraController && player && player.mesh) {
+        cameraController.updateCamera(deltaTime);
+    }
+
+    // Update the UI score
+    const uiScoreValue = document.getElementById('ui-score-value');
+    if (uiScoreValue) {
+        uiScoreValue.textContent = scoreToDisplay.toLocaleString(); // Format with commas
+    }
+
+    // To hide the 3D score counter (optional)
+    if (scoreCounter && scoreCounter.group) {
+        scoreCounter.group.visible = false;
+    }
+
     // Render the scene
     if (renderer && scene && camera) {
         renderer.render(scene, camera);
@@ -495,8 +616,8 @@ function handleCollision(event) {
     // Handle collision at the game level
     const obstacle = event.detail.obstacle;
     
-    // Reduce score on collision
-    window.gameState.reduceScore(100);
+    // Reduce score on collision by 1000 instead of 100
+    window.gameState.reduceScore(1000);
     
     console.log(`Game detected collision with ${obstacle.id}`);
 
@@ -519,24 +640,52 @@ window.addEventListener('keydown', (event) => {
     }
 });
 
+// Modify the calculateScore function to double the speed
 function calculateScore(deltaTime, scrollSpeed) {
-    // Increase the multiplier from what's likely 1.0 to something higher
-    const scoreMultiplier = 2.5; // Increase from likely 1.0 to 2.5
+    // Original calculation had a multiplier of 10, doubling it to 20
+    currentScoreValue += (scrollSpeed * 20) * deltaTime;
+}
+
+// Add this function to check for milestones and trigger effects
+function checkScoreMilestones(score) {
+    const currentScore = Math.floor(score);
     
-    // Apply to current calculation formula
-    currentScoreValue += scrollSpeed * deltaTime * scoreMultiplier;
+    // Check 500-point milestone
+    const milestone500 = Math.floor(currentScore / 500) * 500;
+    if (milestone500 > lastMilestone500) {
+        lastMilestone500 = milestone500;
+        flashScore(false); // Regular flash
+    }
     
-    // Update the score display less frequently to avoid performance issues
-    if (Math.floor(currentScoreValue) > lastScoreUpdate) {
-        if (scoreCounter) {
-            scoreCounter.setScore(Math.floor(currentScoreValue));
-            lastScoreUpdate = Math.floor(currentScoreValue);
+    // Check 1000-point milestone
+    const milestone1000 = Math.floor(currentScore / 1000) * 1000;
+    if (milestone1000 > lastMilestone1000) {
+        lastMilestone1000 = milestone1000;
+        flashScore(true); // Major flash
+        // Play milestone sound
+        if (window.audioManager) {
+            window.audioManager.playSoundEffect('score');
         }
     }
+}
 
-    // Play score sound when score increases
-    if (audioManager && Math.floor(currentScoreValue) > lastScoreUpdate) {
-        audioManager.playScoreSound();
+// Function to flash the score
+function flashScore(isMajor) {
+    const scoreValue = document.getElementById('ui-score-value');
+    if (!scoreValue) return;
+    
+    // Remove any existing animation
+    scoreValue.style.animation = 'none';
+    
+    // Force a reflow to ensure the animation restart
+    void scoreValue.offsetWidth;
+    
+    if (isMajor) {
+        // Major milestone flash (1000 points)
+        scoreValue.style.animation = 'scoreBigFlash 0.8s ease-in-out, scorePulse 2s infinite 0.8s';
+    } else {
+        // Minor milestone flash (500 points)
+        scoreValue.style.animation = 'scoreFlash 0.5s ease-in-out, scorePulse 2s infinite 0.5s';
     }
 }
 
@@ -653,4 +802,63 @@ function showLetsGoAnimation() {
             });
         }
     });
+}
+
+// Update the fixed UI score display
+function createFixedUIScore() {
+    // Create the score container
+    const scoreContainer = document.createElement('div');
+    scoreContainer.id = 'ui-score-container';
+    scoreContainer.style.position = 'fixed';
+    scoreContainer.style.top = '20px';
+    scoreContainer.style.left = '50%';
+    scoreContainer.style.transform = 'translateX(-50%)';
+    scoreContainer.style.padding = '10px 15px';
+    scoreContainer.style.backgroundColor = 'transparent';
+    scoreContainer.style.textAlign = 'center';
+    scoreContainer.style.zIndex = '100';
+    
+    // Create the score value with bigger font
+    const scoreValue = document.createElement('span');
+    scoreValue.id = 'ui-score-value';
+    scoreValue.textContent = '0';
+    scoreValue.style.fontFamily = '"Arial Black", Gadget, sans-serif';
+    scoreValue.style.fontSize = '70px'; // Much bigger font
+    scoreValue.style.fontWeight = '900';
+    scoreValue.style.letterSpacing = '4px';
+    scoreValue.style.color = '#ffcc00'; // Gold color
+    scoreValue.style.textShadow = 
+        '0 0 10px rgba(255, 204, 0, 0.6), ' + 
+        '0 0 20px rgba(255, 204, 0, 0.4), ' +
+        '0 2px 5px rgba(0, 0, 0, 0.9)';
+    
+    // Add a subtle pulsing animation
+    scoreValue.style.animation = 'scorePulse 2s infinite';
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes scorePulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes scoreFlash {
+            0% { color: #ffcc00; text-shadow: 0 0 10px rgba(255, 204, 0, 0.6), 0 0 20px rgba(255, 204, 0, 0.4), 0 2px 5px rgba(0, 0, 0, 0.9); }
+            50% { color: #ffffff; text-shadow: 0 0 20px rgba(255, 255, 255, 0.8), 0 0 30px rgba(255, 255, 255, 0.6), 0 2px 5px rgba(0, 0, 0, 0.9); }
+            100% { color: #ffcc00; text-shadow: 0 0 10px rgba(255, 204, 0, 0.6), 0 0 20px rgba(255, 204, 0, 0.4), 0 2px 5px rgba(0, 0, 0, 0.9); }
+        }
+        
+        @keyframes scoreBigFlash {
+            0% { color: #ffcc00; text-shadow: 0 0 10px rgba(255, 204, 0, 0.6), 0 0 20px rgba(255, 204, 0, 0.4), 0 2px 5px rgba(0, 0, 0, 0.9); transform: scale(1); }
+            25% { color: #ffffff; text-shadow: 0 0 30px rgba(255, 255, 255, 1), 0 0 50px rgba(255, 255, 255, 0.8), 0 2px 10px rgba(0, 0, 0, 0.9); transform: scale(1.2); }
+            50% { color: #ffff00; text-shadow: 0 0 25px rgba(255, 255, 0, 0.9), 0 0 40px rgba(255, 255, 0, 0.7), 0 2px 8px rgba(0, 0, 0, 0.9); transform: scale(1.1); }
+            100% { color: #ffcc00; text-shadow: 0 0 10px rgba(255, 204, 0, 0.6), 0 0 20px rgba(255, 204, 0, 0.4), 0 2px 5px rgba(0, 0, 0, 0.9); transform: scale(1); }
+        }
+    `;
+    document.head.appendChild(style);
+    
+    scoreContainer.appendChild(scoreValue);
+    document.body.appendChild(scoreContainer);
+    
+    return scoreContainer;
 } 

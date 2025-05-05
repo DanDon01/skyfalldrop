@@ -19,24 +19,30 @@ export class Player {
         this.speed = 5; // Units per second
         this.position = new THREE.Vector3(0, 0, 0);
 
-        // Load the player texture
-        this.texture = textureLoader.load('textures/player.png');
-
-        this.createPlayerMesh();
+        // Animation properties
+        this.frames = []; // Array to hold all texture frames
+        this.materials = []; // Array to hold materials for each frame
+        this.currentFrame = 0;
+        this.frameCount = 6; // We have 6 frames (player1.png to player6.png)
+        this.animationSpeed = 10; // Frames per second
+        this.animationTimer = 0;
+        
+        // Load the player animation frames
+        this.loadPlayerFrames();
 
         // --- Player Properties ---
         this.moveSpeed = 5; // Keyboard horizontal speed
         this.horizontalBoundary = 0;
-        this.velocityY = 0; // Back to original (was -15)
-        this.gravity = -9.81 * 2.0; // Increased from -9.81 * 1.5
-        this.targetY = 0;
-        this.isVisuallyFalling = true;
-        this.illusionScrollSpeed = 0;
-        this.baseFallSpeed = 11;    // Increased from 7 to make background scroll faster
-
+        this.velocityY = 0;
+        this.gravity = -9.81 * 2.0;
+        this.targetY = 0; // This is used as the "base" position
+        this.isVisuallyFalling = false; // Change to false so player can move immediately
+        this.illusionScrollSpeed = 11; // Set to base fall speed immediately
+        this.baseFallSpeed = 11;
+        
         // --- Vertical Movement Properties ---
-        this.verticalMoveSpeed = 6; // Keyboard vertical speed
-        this.verticalRange = 1.0;
+        this.verticalMoveSpeed = 10; // Increase from 6 to 10 for faster vertical movement
+        this.verticalRange = 20.0; // Even larger range
         this.verticalOffset = 0;
 
         // --- Touch Sensitivity --- <<< RENAMED/REPURPOSED
@@ -44,6 +50,14 @@ export class Player {
         this.touchSensitivityX = 0.02; // Adjust for desired horizontal drag speed
         this.touchSensitivityY = 0.02; // Adjust for desired vertical drag speed
         // --- End Touch Sensitivity ---
+
+        // Add fallback timer
+        setTimeout(() => {
+            if (!this.mesh) {
+                console.warn("Player frames not loaded after timeout, using fallback");
+                this.loadFallbackTexture();
+            }
+        }, 5000); // 5 second timeout
     }
 
     // Helper function to add mesh to scene
@@ -66,29 +80,31 @@ export class Player {
     }
 
     // Update method now accepts separate keyboard and touch states
-    update(deltaTime, kbdState = {}, touchState = {}) { // Use defaults
+    update(deltaTime, kbdState = {}, touchState = {}) {
+        // Skip update if mesh isn't ready yet
+        if (!this.mesh) return;
+        
         if (!this.mesh || !camera) return;
-        // console.log("Player Update - Input:", inputState); // <<< ADD LOG
 
         // --- Calculate Screen Boundaries ---
         // Visible height at z=0 (player plane)
         const vFOV = THREE.MathUtils.degToRad(camera.fov); // Vertical FOV in radians
-        const height = 2 * Math.tan(vFOV / 2) * camera.position.z;
+        const height = 2 * Math.tan(vFOV / 2) * Math.abs(camera.position.z);
         // Visible width at z=0
         const width = height * camera.aspect;
         // Calculate boundary based on screen width and player width
         this.horizontalBoundary = (width / 2) - (this.playerWidth / 2);
+        
+        // Also calculate vertical boundaries
+        const topLimit = (height / 2) - 0.3; // Only 0.3 units from top of screen (was 1.5)
+        const bottomLimit = -(height / 2) + 2.7; //2.7 Keep bottom limit to prevent portal issues
         // --- End Calculate Screen Boundaries ---
 
         // --- Handle Horizontal Movement ---
         let horizontalMovement = 0;
         if (touchState.touching && touchState.deltaX !== 0) {
-            // Direct touch drag (deltaX is pixels moved since last frame)
             horizontalMovement = touchState.deltaX * this.touchSensitivityX;
-            // Optional: Multiply by deltaTime if sensitivity is per second?
-            // horizontalMovement *= deltaTime; // Try with and without this
         } else {
-            // Keyboard movement (uses moveSpeed)
             let moveDirectionX = 0;
             if (kbdState.ArrowLeft) { moveDirectionX -= 1; }
             if (kbdState.ArrowRight) { moveDirectionX += 1; }
@@ -102,56 +118,40 @@ export class Player {
 
         // --- Apply Gravity / Vertical State ---
         let finalY = this.mesh.position.y;
-
+        
+        // Skip the falling phase completely and go right to player control
         if (this.isVisuallyFalling) {
-            // Apply gravity during initial fall
-            this.velocityY += this.gravity * deltaTime;
-            let newY = this.mesh.position.y + this.velocityY * deltaTime;
-
-            // Check if player reached or passed the target Y
-            if (newY <= this.targetY) {
-                finalY = this.targetY; // Clamp position to target
-                this.velocityY = 0;
-                this.isVisuallyFalling = false;
-                this.illusionScrollSpeed = this.baseFallSpeed;
-                this.verticalOffset = 0; // Reset vertical offset when reaching target
-                console.log("Player reached target Y. Vertical controls enabled.");
-            } else {
-                finalY = newY; // Continue falling
-            }
-            this.mesh.position.y = finalY; // Update position during fall
-
-        } else {
-            // --- Handle Vertical Nudge Controls (Keyboard and Touch) ---
-            let verticalMovement = 0; // Change in verticalOffset
-
-            if (touchState.touching && touchState.deltaY !== 0) {
-                // Direct touch drag (deltaY is pixels moved since last frame)
-                // Screen Y is inverted relative to world Y, so subtract deltaY
-                verticalMovement = -touchState.deltaY * this.touchSensitivityY;
-                 // Optional: Multiply by deltaTime?
-                 // verticalMovement *= deltaTime; // Try with and without this
-            } else {
-                 // Keyboard movement (uses verticalMoveSpeed)
-                let moveDirectionY = 0;
-                if (kbdState.ArrowUp) { moveDirectionY += 1; }
-                if (kbdState.ArrowDown) { moveDirectionY -= 1; }
-                verticalMovement = moveDirectionY * this.verticalMoveSpeed * deltaTime;
-            }
-
-            this.verticalOffset += verticalMovement;
-            this.verticalOffset = Math.max(-this.verticalRange, Math.min(this.verticalRange, this.verticalOffset));
-            finalY = this.targetY + this.verticalOffset;
-            this.mesh.position.y = finalY;
-
+            this.isVisuallyFalling = false;
             this.illusionScrollSpeed = this.baseFallSpeed;
-            // --- End Vertical Nudge Controls ---
+            this.verticalOffset = 0;
+            console.log("Player vertical controls enabled.");
         }
+        
+        // Always allow vertical movement
+        let verticalMovement = 0;
+        
+        if (touchState.touching && touchState.deltaY !== 0) {
+            verticalMovement = -touchState.deltaY * this.touchSensitivityY * 2;
+        } else {
+            let moveDirectionY = 0;
+            if (kbdState.ArrowUp) { moveDirectionY += 1; }
+            if (kbdState.ArrowDown) { moveDirectionY -= 1; }
+            verticalMovement = moveDirectionY * this.verticalMoveSpeed * deltaTime;
+        }
+        
+        // Apply direct position change
+        this.mesh.position.y += verticalMovement;
+        
+        // Clamp position to screen boundaries (using previously calculated limits)
+        this.mesh.position.y = Math.max(bottomLimit, Math.min(topLimit, this.mesh.position.y));
         // --- End Apply Gravity / Vertical State ---
 
         // --- Other Updates (facing camera) ---
         this.mesh.rotation.copy(camera.rotation);
         // --- End Other Updates ---
+
+        // Update animation
+        this.updateAnimation(deltaTime);
     }
 
     // Method for external components to get the scroll speed
@@ -163,6 +163,7 @@ export class Player {
 
     // Add this method to your Player class
     getPosition() {
+        if (!this.mesh) return new THREE.Vector3(0, 0, 0);
         return this.mesh.position.clone();
     }
 
@@ -213,24 +214,151 @@ export class Player {
     }
 
     // Adjust player sprite size to be 10% smaller
-    createPlayerMesh() {
-        // Create a plane geometry for the player sprite
-        const geometry = new THREE.PlaneGeometry(this.playerWidth, this.playerHeight);
+    createPlayerMesh(initialMaterial) {
+        // Create a sprite with the first frame's material
+        const sprite = new THREE.Sprite(initialMaterial);
         
-        // Create a material with the player texture
-        const material = new THREE.MeshBasicMaterial({
-            map: this.texture,
-            transparent: true,
-            side: THREE.DoubleSide
-        });
+        // Set the sprite's initial position and scale
+        sprite.position.set(0, 0, 0); // Start at origin
         
-        // Create the mesh with the geometry and material
-        this.mesh = new THREE.Mesh(geometry, material);
+        // Scale the sprite to a reasonable size
+        sprite.scale.set(1, 1, 1);
         
-        // Start player above the center target (restored from original code)
-        this.mesh.position.set(0, 8, 0); // Start higher
-        
-        // Add to scene
+        // Store the mesh and add it to the scene
+        this.mesh = sprite;
         this.scene.add(this.mesh);
+        
+        console.log("Created player sprite mesh");
+    }
+
+    loadPlayerFrames() {
+        const textureLoader = new THREE.TextureLoader();
+        let framesLoaded = 0;
+        
+        // Try different path formats to find the correct one
+        const possibleBasePaths = [
+            `textures/player/player`, // Relative path
+            `/textures/player/player`, // Root-relative path
+            `./textures/player/player`, // Explicit relative path
+            window.location.origin + '/textures/player/player' // Full URL
+        ];
+        
+        console.log("Current location:", window.location.href);
+        console.log("Trying to load player frames from possible paths:", possibleBasePaths);
+        
+        let pathIndex = 0;
+        const tryLoadFrames = () => {
+            if (pathIndex >= possibleBasePaths.length) {
+                console.error("Failed to load player frames from all possible paths. Falling back to static texture.");
+                this.loadFallbackTexture();
+                return;
+            }
+            
+            const basePath = possibleBasePaths[pathIndex];
+            console.log(`Attempting to load player frames from base path: ${basePath}`);
+            
+            // Try to load test frame 1 first to verify path
+            textureLoader.load(
+                `${basePath}1.png`,
+                (texture) => {
+                    console.log(`✅ Success! Found correct path: ${basePath}`);
+                    
+                    // Now load all frames with the correct path
+                    for (let i = 1; i <= this.frameCount; i++) {
+                        const frameURL = `${basePath}${i}.png`;
+                        console.log(`Loading frame ${i} from: ${frameURL}`);
+                        
+                        textureLoader.load(
+                            frameURL,
+                            (texture) => {
+                                // Create a material for this frame
+                                const material = new THREE.SpriteMaterial({ 
+                                    map: texture,
+                                    transparent: true
+                                });
+                                
+                                // Store the texture and material (at correct index)
+                                const frameIndex = i - 1;
+                                this.frames[frameIndex] = texture;
+                                this.materials[frameIndex] = material;
+                                
+                                framesLoaded++;
+                                console.log(`Loaded player frame ${i}/${this.frameCount}`);
+                                
+                                // When the first frame is loaded, create the mesh
+                                if (framesLoaded === 1) {
+                                    this.createPlayerMesh(material);
+                                }
+                                
+                                // When all frames are loaded, player is ready
+                                if (framesLoaded === this.frameCount) {
+                                    console.log("All player animation frames loaded successfully");
+                                    this.isLoading = false;
+                                }
+                            },
+                            undefined,
+                            (error) => {
+                                console.error(`Error loading player frame ${i} from ${frameURL}:`, error);
+                            }
+                        );
+                    }
+                },
+                undefined,
+                (error) => {
+                    console.log(`❌ Failed to load from ${basePath}1.png - trying next path`);
+                    pathIndex++;
+                    tryLoadFrames(); // Try next path
+                }
+            );
+        };
+        
+        // Start trying paths
+        tryLoadFrames();
+    }
+
+    // Method to update the current animation frame
+    updateAnimation(deltaTime) {
+        if (this.isLoading || this.frames.length < this.frameCount) {
+            return; // Animation not ready yet
+        }
+        
+        // Update animation timer
+        this.animationTimer += deltaTime;
+        const frameDuration = 1 / this.animationSpeed;
+        
+        // Check if it's time to advance to the next frame
+        if (this.animationTimer >= frameDuration) {
+            // Move to next frame
+            this.currentFrame = (this.currentFrame + 1) % this.frameCount;
+            
+            // Update the sprite's material
+            if (this.mesh && this.materials[this.currentFrame]) {
+                this.mesh.material = this.materials[this.currentFrame];
+            }
+            
+            // Reset timer, accounting for any remainder
+            this.animationTimer %= frameDuration;
+        }
+    }
+
+    // Add this fallback method:
+    loadFallbackTexture() {
+        console.log("Loading fallback player texture");
+        const textureLoader = new THREE.TextureLoader();
+        textureLoader.load(
+            'textures/player.png', // Original static texture
+            (texture) => {
+                const material = new THREE.SpriteMaterial({
+                    map: texture,
+                    transparent: true
+                });
+                this.createPlayerMesh(material);
+                this.isLoading = false;
+            },
+            undefined,
+            (error) => {
+                console.error("Critical error: Failed to load fallback player texture:", error);
+            }
+        );
     }
 } 

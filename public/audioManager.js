@@ -5,13 +5,15 @@ export class AudioManager {
         // Create audio listener
         this.listener = new THREE.AudioListener();
         
+        // Create audio loader as a class property
+        this.audioLoader = new THREE.AudioLoader();
+        
         // Sound effects library
         this.sounds = {
             collision: null,
             portal: null,
             score: null,
-            wind: null,
-            background: null
+            wind: null
         };
         
         // Master volume
@@ -20,19 +22,27 @@ export class AudioManager {
         // Track if audio is initialized
         this.initialized = false;
         
+        // Array to hold all collision sound effects
+        this.collisionSounds = [];
+        
+        // Background music tracks
+        this.backgroundTracks = [];
+        this.currentBackgroundTrack = 0;
+        this.backgroundMusicEnabled = true;
+        
         // Load sound effects with correct paths
         this.loadSounds();
+        
+        // Load multiple collision sounds
+        this.loadCollisionSounds();
     }
     
     loadSounds() {
-        // Create audio loader
-        const audioLoader = new THREE.AudioLoader();
-        
         // Helper function to load sound with fallback and synthetic sound generation
         const loadSoundWithFallback = (soundKey, filename, volume, loop = false) => {
             this.sounds[soundKey] = new THREE.Audio(this.listener);
             
-            audioLoader.load(
+            this.audioLoader.load(
                 filename,
                 (buffer) => {
                     // Success - set the buffer
@@ -51,20 +61,32 @@ export class AudioManager {
                 (error) => {
                     console.error(`Error loading sound file: ${filename}`, error);
                     
-                    // For collision sound specifically, create a synthetic replacement
-                    if (soundKey === 'collision') {
-                        this.createFallbackCollisionSound();
+                    // Create fallback sound appropriate for the sound type
+                    switch(soundKey) {
+                        case 'collision':
+                            this.createFallbackCollisionSound();
+                            break;
+                        case 'portal':
+                            this.createFallbackPortalSound();
+                            break;
+                        case 'score':
+                            this.createFallbackScoreSound();
+                            break;
+                        case 'wind':
+                            this.createFallbackWindSound();
+                            break;
                     }
                 }
             );
         };
         
         // Load actual audio files from the audio folder
-        loadSoundWithFallback('collision', 'audio/sfx_hit_bounce.mp3', 0.5);
         loadSoundWithFallback('portal', 'audio/sfx_portal_warp.mp3', 0.7);
         loadSoundWithFallback('score', 'audio/sfx_milestone_ping.mp3', 0.4);
         loadSoundWithFallback('wind', 'audio/sfx_snapshot_slowmo.mp3', 0.3, true);
-        loadSoundWithFallback('background', 'audio/background_loop.mp3', 0.3, true);
+        
+        // Load the background music separately
+        this.loadBackgroundMusic();
     }
     
     // Initialize audio after user interaction
@@ -156,8 +178,18 @@ export class AudioManager {
     
     // Play specific sound effects
     playCollisionSound() {
-        if (this.sounds.collision && !this.sounds.collision.isPlaying) {
-            this.sounds.collision.play();
+        // Only use the new random oof sounds
+        if (this.collisionSounds.length > 0) {
+            this.playRandomCollisionSound();
+        } else {
+            // If no oof sounds loaded yet, create and play a synthetic collision sound
+            if (!this.sounds.collision || !this.sounds.collision.buffer) {
+                this.createFallbackCollisionSound();
+            }
+            
+            if (this.sounds.collision && this.sounds.collision.buffer) {
+                this.sounds.collision.play();
+            }
         }
     }
     
@@ -188,15 +220,59 @@ export class AudioManager {
     
     // Background music control
     playBackgroundMusic() {
-        if (this.sounds.background && !this.sounds.background.isPlaying) {
-            this.sounds.background.play();
+        if (!this.backgroundMusicEnabled) return;
+        
+        if (this.backgroundTracks.length > 0) {
+            // Use our new track system
+            const currentTrack = this.backgroundTracks[this.currentBackgroundTrack];
+            if (currentTrack && !currentTrack.isPlaying) {
+                console.log(`Starting background music with track ${this.currentBackgroundTrack + 1}`);
+                currentTrack.play();
+            }
+        } else if (this.sounds.background) {
+            // Fallback to the old system if no tracks are loaded
+            if (!this.sounds.background.isPlaying) {
+                this.sounds.background.play();
+            }
+        } else {
+            // Last resort - create synthetic music
+            this.createFallbackBackgroundMusic();
+            if (this.sounds.background && !this.sounds.background.isPlaying) {
+                this.sounds.background.play();
+            }
         }
     }
     
     pauseBackgroundMusic() {
-        if (this.sounds.background && this.sounds.background.isPlaying) {
+        if (this.backgroundTracks.length > 0) {
+            // Use our new track system
+            const currentTrack = this.backgroundTracks[this.currentBackgroundTrack];
+            if (currentTrack && currentTrack.isPlaying) {
+                currentTrack.pause();
+            }
+        } else if (this.sounds.background && this.sounds.background.isPlaying) {
+            // Fallback to the old system
             this.sounds.background.pause();
         }
+    }
+    
+    stopBackgroundMusic() {
+        this.backgroundMusicEnabled = false;
+        
+        if (this.backgroundTracks.length > 0) {
+            // Use our new track system
+            this.backgroundTracks.forEach(track => {
+                if (track && track.isPlaying) track.stop();
+            });
+        } else if (this.sounds.background && this.sounds.background.isPlaying) {
+            // Fallback to the old system
+            this.sounds.background.stop();
+        }
+    }
+    
+    resumeBackgroundMusic() {
+        this.backgroundMusicEnabled = true;
+        this.playBackgroundMusic();
     }
     
     // Volume control
@@ -218,9 +294,6 @@ export class AudioManager {
                         this.sounds[sound].setVolume(0.4 * this.masterVolume);
                         break;
                     case 'wind':
-                        this.sounds[sound].setVolume(0.3 * this.masterVolume);
-                        break;
-                    case 'background':
                         this.sounds[sound].setVolume(0.3 * this.masterVolume);
                         break;
                 }
@@ -441,6 +514,124 @@ export class AudioManager {
             this.sounds.background.setBuffer(buffer);
             this.sounds.background.setVolume(0.15 * this.masterVolume);
             this.sounds.background.setLoop(true);
+        }
+    }
+    
+    // Load multiple collision sounds
+    loadCollisionSounds() {
+        const soundCount = 8; // We have 8 sounds (oof1.mp3 to oof8.mp3)
+        
+        for (let i = 1; i <= soundCount; i++) {
+            const soundFile = `audio/oof${i}.mp3`; // Use MP3 format
+            
+            this.audioLoader.load(
+                soundFile,
+                (buffer) => {
+                    this.collisionSounds.push(buffer);
+                    console.log(`Loaded collision sound ${i}/${soundCount}`);
+                },
+                (xhr) => {
+                    // Loading progress if needed
+                },
+                (error) => {
+                    console.error(`Error loading collision sound ${i}:`, error);
+                }
+            );
+        }
+    }
+    
+    // Method to play a random collision sound
+    playRandomCollisionSound() {
+        if (!this.initialized || this.collisionSounds.length === 0) {
+            return; // No sounds loaded yet
+        }
+        
+        // Pick a random sound from the array
+        const randomIndex = Math.floor(Math.random() * this.collisionSounds.length);
+        const soundBuffer = this.collisionSounds[randomIndex];
+        
+        // Play the sound
+        const sound = new THREE.Audio(this.listener);
+        sound.setBuffer(soundBuffer);
+        sound.setVolume(0.5); // Adjust volume as needed
+        sound.play();
+    }
+    
+    // Update the playSoundEffect method to handle missing collision sound
+    playSoundEffect(soundKey) {
+        // If trying to play the 'hit' sound, use the collision sound instead
+        if (soundKey === 'hit') {
+            this.playCollisionSound();
+            return;
+        }
+        
+        // Play the requested sound if it exists
+        const sound = this.sounds[soundKey];
+        if (sound && sound.buffer && !sound.isPlaying) {
+            sound.play();
+        }
+    }
+    
+    // Add a method to load the background music tracks
+    loadBackgroundMusic() {
+        console.log("Loading background music tracks...");
+        
+        const tracks = [
+            { file: 'audio/bgmusic1.mp3', volume: 0.3 },
+            { file: 'audio/bgmusic2.mp3', volume: 0.3 }
+        ];
+        
+        tracks.forEach((track, index) => {
+            const sound = new THREE.Audio(this.listener);
+            
+            this.audioLoader.load(
+                track.file,
+                (buffer) => {
+                    sound.setBuffer(buffer);
+                    sound.setVolume(track.volume * this.masterVolume);
+                    sound.onEnded = () => this.playNextBackgroundTrack();
+                    
+                    this.backgroundTracks.push(sound);
+                    console.log(`Loaded background track ${index + 1}: ${track.file}`);
+                    
+                    // If this is the first track and no music is playing, start it
+                    if (index === 0 && this.backgroundMusicEnabled && 
+                        this.backgroundTracks.length === 1) {
+                        setTimeout(() => this.playBackgroundMusic(), 500);
+                    }
+                },
+                (xhr) => {
+                    console.log(`${track.file}: ${(xhr.loaded / xhr.total * 100).toFixed(0)}% loaded`);
+                },
+                (error) => {
+                    console.error(`Error loading background track: ${track.file}`, error);
+                    // Fall back to synthetic music if loading fails
+                    if (this.backgroundTracks.length === 0) {
+                        this.createFallbackBackgroundMusic();
+                    }
+                }
+            );
+        });
+    }
+    
+    // Create a method to play the next track in sequence
+    playNextBackgroundTrack() {
+        if (!this.backgroundMusicEnabled || this.backgroundTracks.length === 0) return;
+        
+        // Stop the current track if it's playing
+        const currentTrack = this.backgroundTracks[this.currentBackgroundTrack];
+        if (currentTrack && currentTrack.isPlaying) {
+            currentTrack.stop();
+        }
+        
+        // Move to the next track
+        this.currentBackgroundTrack = (this.currentBackgroundTrack + 1) % this.backgroundTracks.length;
+        
+        // Play the new current track
+        const nextTrack = this.backgroundTracks[this.currentBackgroundTrack];
+        if (nextTrack && nextTrack.buffer) {
+            console.log(`Playing background track ${this.currentBackgroundTrack + 1}`);
+            nextTrack.play();
         }
     }
 } 

@@ -98,6 +98,13 @@ export class CollisionSystem {
         
         // Log collision for debugging
         console.log(`Collision detected with obstacle: ${obstacle.id}`);
+        
+        // When a collision is detected: Check if audioManager exists in window
+        if (window.audioManager) {
+            window.audioManager.playCollisionSound();
+        } else {
+            console.warn("audioManager not available for collision sound");
+        }
     }
     
     createDebugHelper(playerPos, obstaclePos, distance) {
